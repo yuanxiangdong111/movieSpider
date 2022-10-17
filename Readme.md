@@ -71,7 +71,19 @@ config file is config.yaml.
 # movieSpider-linux -f config.yaml --run.bot
 ```
 
+# 自行编译
+* 安装 golang 1.18 略
+* git clone
 
+```shell
+git clone https://github.com/YouCD/movieSpider.git
+```
+* 编译
+
+```shell
+# cd movieSpider
+# make build 
+```
 # systemd
 ```shell
 name=movieSpider

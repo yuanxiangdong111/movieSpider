@@ -18,7 +18,6 @@ BINARY_NAME:=movieSpider
 
 build:
 	CGO_ENABLED=1 $(GOBUILD) -ldflags $(FLAG) -o $(BINARY_DIR)/$(BINARY_NAME)
-	upx $(BINARY_DIR)/$(BINARY_NAME)
 # linux
 build-linux:
 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 $(GOBUILD) -ldflags $(FLAG) -o $(BINARY_DIR)/$(BINARY_NAME)-linux
