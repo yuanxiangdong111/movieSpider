@@ -1,5 +1,5 @@
 # movieSpider
- 主要自动化下载电影的爬虫工具
+  自动化下载电影的爬虫工具
 
 # 前置条件
 * 安装MySQL
@@ -76,7 +76,10 @@ config file is config.yaml.
 ```
 
 # 自行编译
-* 安装 golang 1.18 略
+* 安装 golang 1.18 
+
+参考 [一键安装](https://github.com/Jrohy/go-install)
+
 * git clone
 
 ```shell
