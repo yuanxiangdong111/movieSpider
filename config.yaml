@@ -1,0 +1,60 @@
+MySQL:
+  Host: 127.0.0.1
+  Port: 3306
+  Database: movie
+  User: root
+  Password: PASSWORD
+
+Douban:
+  # 豆瓣电影想看清单
+  DoubanUrl: "https://movie.douban.com/people/251312920/wish"
+  Scheduling: "*/5 * * * *"
+  # 豆瓣电影 公共API
+  WMDBPrefix: "https://api.wmdb.tv/movie/api?id="
+Feed:
+  BTBT:
+    Url: https://www.btbtt12.com/forum-index-fid-951.htm
+    Scheduling: "*/5 * * * *"
+  EZTV:
+    Scheduling: "*/5 * * * *"
+    Url: "https://eztv.re/ezrss.xml"
+  GLODLS:
+    Scheduling: "*/3 * * * *"
+    Url: "https://glodls.to/rss.php?cat=1,41"
+  RARBG:
+    - Scheduling: "*/5 * * * *"
+      Url: "https://rarbgprx.org/rssdd.php?categories=14;15;16;17;21;22;42;44;45;46;47;48"
+      ResourceType: movie
+    - Scheduling: "*/5 * * * *"
+      Url: "https://rarbg.to/rssdd.php?categories=14;15;16;17;21;22;42;44;45;46;47;48"
+      ResourceType: tv
+  KNABEN:
+    Url: "https://rss.knaben.eu"
+  Bt4G:
+    Url: "https://bt4g.org"
+
+Global:
+  LogLevel: info
+  # 特殊的站点需要科需上网 全局代理
+#  Proxy: socks5://127.0.0.1:1089
+
+# Downloader 下载
+Downloader:
+  Scheduling: "*/1 * * * *"
+  # 使用哪个 Aria2 下载
+  Aria2Label: "home"
+
+# Aria2 下载服务器
+Aria2cList:
+  - Url: "http://127.0.0.1:6800"
+    Token: TOKEN
+    Label: home
+  - Url: "http://127.0.0.1:6801"
+    Token: TOKEN
+    Label: nas
+# 如果没有Telegram 就请忽略
+TG:
+  # Telegram 机器人 token
+  BotToken: "TOKEN"
+  # 能正常访问机器人的Telegram用户
+  TgIDs: [ 123456 ]
