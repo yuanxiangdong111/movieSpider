@@ -41,6 +41,9 @@ func (b *bt4g) Crawler() (videos []*types.FeedVideo, err error) {
 	}
 	log.Debugf("BT4G Config: %#v", b)
 	log.Debugf("BT4G Data: %#v", fd.String())
+	if len(fd.Items) == 0 {
+		return nil, pkg.ErrBT4GFeedNull
+	}
 	for _, v := range fd.Items {
 		// 片名
 		name := strings.ReplaceAll(v.Title, " ", ".")
@@ -48,13 +51,14 @@ func (b *bt4g) Crawler() (videos []*types.FeedVideo, err error) {
 		if ok {
 			continue
 		}
+		if v.Link == "" {
+			continue
+		}
 
 		fVideo := new(types.FeedVideo)
 		fVideo.Web = b.web
 		fVideo.Name = name
-
 		fVideo.Magnet = v.Link
-
 		// 种子名
 		fVideo.TorrentName = fVideo.Name
 

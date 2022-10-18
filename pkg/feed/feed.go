@@ -6,6 +6,7 @@ import (
 	"movieSpider/pkg/feed/eztv"
 	"movieSpider/pkg/feed/glodls"
 	"movieSpider/pkg/feed/rarbg"
+	"movieSpider/pkg/log"
 	"movieSpider/pkg/types"
 )
 
@@ -26,8 +27,9 @@ func RunFeed() {
 		feederTask(feedEztv)
 	}
 
-	for _, r := range config.RARBGs {
+	for _, r := range config.RARBG {
 		if r != nil {
+			log.Debug(r)
 			feedRarbg := rarbg.NewFeedRarbg(r.Url, r.Scheduling, r.Typ)
 			feederTask(feedRarbg)
 		}

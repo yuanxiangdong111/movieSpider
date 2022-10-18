@@ -42,14 +42,15 @@ func NewFeedRarbg(url, scheduling string, resourceType types.Resource) *rarbg {
 }
 func (r *rarbg) Crawler() (Videos []*types.FeedVideo, err error) {
 	fp := gofeed.NewParser()
-
 	if r.typ == types.ResourceMovie {
 		fd, _ := fp.ParseURL(r.url)
 		if fd == nil {
 			return nil, pkg.ErrRARBFeedNull
 		}
-		log.Debugf("RARBG Config: %#v", fd)
-		log.Debugf("RARBG Data: %#v", fd.String())
+		log.Debugf("RARBG movie Data: %#v", fd.String())
+		if len(fd.Items) == 0 {
+			return nil, pkg.ErrRARBMovieFeedNull
+		}
 		compileRegex := regexp.MustCompile("(.*)\\.([0-9][0-9][0-9][0-9])\\.")
 		for _, v := range fd.Items {
 			// 片名
@@ -86,10 +87,14 @@ func (r *rarbg) Crawler() (Videos []*types.FeedVideo, err error) {
 	if r.typ == types.ResourceTV {
 		fd, _ := fp.ParseURL(r.url)
 		if fd == nil {
+			log.Debug("RARBG tv Feed is nill")
+			return nil, pkg.ErrRARBTVFeedNull
+		}
+		log.Debugf("RARBG tv Data: %#v", fd.String())
+		if len(fd.Items) == 0 {
+			log.Warn("RARBG: 没有 tv feed 数据")
 			return nil, pkg.ErrRARBFeedNull
 		}
-		log.Debugf("RARBG Config: %#v", fd)
-		log.Debugf("RARBG Data: %#v", fd.String())
 		compileRegex := regexp.MustCompile("(.*)\\.[sS][0-9][0-9]|[Ee][0-9][0-9]?\\.")
 		for _, v := range fd.Items {
 			// 片名
@@ -108,7 +113,7 @@ func (r *rarbg) Crawler() (Videos []*types.FeedVideo, err error) {
 			// 原始数据
 			bytes, _ := json.Marshal(v)
 			fVideo.RowData = string(bytes)
-
+			fVideo.Web = r.web
 			// 片名
 			if len(matchArr) > 0 {
 				fVideo.Name = matchArr[1]
@@ -124,14 +129,19 @@ func (r *rarbg) Crawler() (Videos []*types.FeedVideo, err error) {
 }
 func (r *rarbg) Run() {
 	if r.scheduling == "" {
-		log.Error("RARBG Scheduling is null")
+		log.Errorf("RARBG %s: Scheduling is null", r.typ.Typ())
 		os.Exit(1)
 	}
-	log.Infof("RARBG Scheduling is: [%s]", r.scheduling)
+	log.Infof("RARBG %s: Scheduling is: [%s]", r.typ.Typ(), r.scheduling)
 	c := cron.New()
 	_, err := c.AddFunc(r.scheduling, func() {
 		videos, err := r.Crawler()
 		pkg.CheckError("RARBG", err)
+		if len(videos) == 0 {
+			log.Infof("RARBG %s: 没有数据.", r.typ.Typ())
+			return
+		}
+
 		for _, v := range videos {
 			go func(video *types.FeedVideo) {
 				err = model.MovieDB.CreatFeedVideo(video)

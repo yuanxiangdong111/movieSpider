@@ -6,6 +6,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/spf13/viper"
 	"io/ioutil"
+	"movieSpider/pkg/log"
 	"movieSpider/pkg/types"
 	"os"
 )
@@ -55,7 +56,7 @@ var (
 	GLODLS     = new(glodls)
 	KNABEN     = new(knaben)
 	Bt4G       = new(bt4g)
-	RARBGs     []*rarbg
+	RARBG      []*rarbg
 	Downloader *downloader
 )
 
@@ -109,9 +110,7 @@ func InitConfig(config string) (err error) {
 		os.Exit(1)
 		return nil
 	}
-	if Global.LogLevel == "debug" {
-		fmt.Println(string(b))
-	}
+
 	err = v.ReadConfig(bytes.NewReader(b))
 	if err != nil {
 		fmt.Printf("配置文件错误.")
@@ -119,7 +118,15 @@ func InitConfig(config string) (err error) {
 		return nil
 	}
 
-	Global.Proxy = v.GetString("Global.Proxy")
+	err = v.UnmarshalKey("Global", &Global)
+	if err != nil {
+		fmt.Println("读取Global配置错误")
+		os.Exit(-1)
+	}
+	if Global.LogLevel == "debug" {
+		fmt.Println(string(b))
+	}
+	log.NewLogger(Global.LogLevel)
 
 	err = v.UnmarshalKey("BtSpider", &BtSpider)
 	if err != nil {
@@ -208,11 +215,12 @@ func InitConfig(config string) (err error) {
 		Bt4G = nil
 	}
 
-	if err = v.UnmarshalKey("Feed.RARBG", &RARBGs); err != nil {
+	if err = v.UnmarshalKey("Feed.RARBG", &RARBG); err != nil {
 		fmt.Println("读取GLODLS配置错误")
 		os.Exit(-1)
 	}
-	for _, v := range RARBGs {
+
+	for _, v := range RARBG {
 		if !govalidator.IsURL(v.Url) {
 			v = nil
 			continue

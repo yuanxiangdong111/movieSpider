@@ -43,6 +43,9 @@ func (k *knaben) Crawler() (videos []*types.FeedVideo, err error) {
 	}
 	log.Debugf("KNABEN Config: %#v", fd)
 	log.Debugf("KNABEN Data: %#v", fd.String())
+	if len(fd.Items) == 0 {
+		return nil, pkg.ErrKNABENFeedNull
+	}
 	for _, v := range fd.Items {
 		// 片名
 		name := strings.ReplaceAll(v.Title, " ", ".")

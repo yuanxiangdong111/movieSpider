@@ -41,6 +41,9 @@ func (g *glodls) Crawler() (videos []*types.FeedVideo, err error) {
 	}
 	log.Debugf("GLODLS Config: %#v", fd)
 	log.Debugf("GLODLS Data: %#v", fd.String())
+	if len(fd.Items) == 0 {
+		return nil, pkg.ErrGLODLSFeedNull
+	}
 	var videosA []*types.FeedVideo
 	for _, v := range fd.Items {
 

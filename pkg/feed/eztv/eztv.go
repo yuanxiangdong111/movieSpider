@@ -35,6 +35,9 @@ func (f *eztv) Crawler() (videos []*types.FeedVideo, err error) {
 	}
 	log.Debugf("EZTV Config: %#v", fd)
 	log.Debugf("EZTV Data: %#v", fd.String())
+	if len(fd.Items) == 0 {
+		return nil, pkg.ErrEZTVFeedNull
+	}
 	for _, v := range fd.Items {
 		torrentName := strings.ReplaceAll(v.Title, " ", ".")
 

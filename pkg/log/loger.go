@@ -1,7 +1,6 @@
 package log
 
 import (
-	"movieSpider/pkg/config"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,17 +24,14 @@ const (
 var logger *zap.SugaredLogger
 var AtomicLevel = zap.NewAtomicLevelAt(zap.DebugLevel)
 
-func init() {
-	log := NewLogger(config.Global.LogLevel)
-	// defer log.Sync()
-	logger = log.Sugar()
-	logger.Sync()
-}
-
-func NewLogger(level string) *zap.Logger {
+func NewLogger(level string) {
 	core := newCore(level)
+	l := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1), zap.Development())
+	logger = l.Sugar()
+	logger.Sync()
+
 	//return zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1), zap.Development(), zap.AddStacktrace(zap.ErrorLevel)))
-	return zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1), zap.Development())
+
 }
 
 func newCore(level string) zapcore.Core {
@@ -82,7 +78,7 @@ func newCore(level string) zapcore.Core {
 		//		zapcore.NewJSONEncoder(encoderConfig), // 编码器配置
 		//zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), // 打印到控制台和文件
 		zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)), // 打印到控制台和文件
-		AtomicLevel, // 日志级别
+		AtomicLevel,                                             // 日志级别
 	)
 }
 

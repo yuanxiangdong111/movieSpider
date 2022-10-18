@@ -101,11 +101,17 @@ func (d *wmdb) Run() {
 		}
 		video.ImdbID = v.ImdbID
 		video.RowData = v.RowData
-		video.Type = v.Type
+		if v.Type == "TVSeries" {
+			video.Type = "tv"
+		} else {
+			video.Type = v.Type
+		}
+
 		video.Names = v.Names
 		err = model.MovieDB.UpDateDouBanVideo(video)
 		if err != nil {
 			log.Error(err)
+			return
 		}
 		log.Warnf("WMDB: %s 更新完毕", video.Names)
 	})

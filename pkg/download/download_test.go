@@ -32,3 +32,16 @@ func Test_download_DownloadByName1(t *testing.T) {
 	}
 	d.DownloadByName("Werewolf.by.Night", "2160")
 }
+
+func Test_download_downloadTvTask(t *testing.T) {
+	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
+	model.NewMovieDB()
+	d := &download{
+		scheduling: "tt.fields.scheduling",
+	}
+	err := d.downloadTvTask()
+	if err != nil {
+		t.Error(err)
+	}
+
+}

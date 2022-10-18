@@ -22,11 +22,11 @@ Feed:
     Scheduling: "*/3 * * * *"
     Url: "https://glodls.to/rss.php?cat=1,41"
   RARBG:
-    - Scheduling: "*/5 * * * *"
+    - Scheduling: "*/10 * * * *"
       Url: "https://rarbgprx.org/rssdd.php?categories=14;15;16;17;21;22;42;44;45;46;47;48"
       ResourceType: movie
     - Scheduling: "*/5 * * * *"
-      Url: "https://rarbg.to/rssdd.php?categories=14;15;16;17;21;22;42;44;45;46;47;48"
+      Url: "https://rarbg.to/rssdd.php?categories=18;19;41"
       ResourceType: tv
   KNABEN:
     Url: "https://rss.knaben.eu"
