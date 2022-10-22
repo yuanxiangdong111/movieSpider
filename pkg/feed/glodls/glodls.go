@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/mmcdole/gofeed"
+	"github.com/pkg/errors"
 	"github.com/robfig/cron/v3"
-	"movieSpider/pkg"
+
 	httpClient2 "movieSpider/pkg/httpClient"
 	"movieSpider/pkg/log"
 	"movieSpider/pkg/model"
@@ -37,16 +38,15 @@ func (g *glodls) Crawler() (videos []*types.FeedVideo, err error) {
 	fp := gofeed.NewParser()
 	fd, err := fp.ParseURL(g.url)
 	if fd == nil {
-		return nil, pkg.ErrGLODLSFeedNull
+		return nil, errors.New("GLODLS: 没有feed数据")
 	}
 	log.Debugf("GLODLS Config: %#v", fd)
 	log.Debugf("GLODLS Data: %#v", fd.String())
 	if len(fd.Items) == 0 {
-		return nil, pkg.ErrGLODLSFeedNull
+		return nil, errors.New("GLODLS: 没有feed数据")
 	}
 	var videosA []*types.FeedVideo
 	for _, v := range fd.Items {
-
 		// 片名
 		torrentName := strings.ReplaceAll(v.Title, " ", ".")
 		ok := utils.ExcludeVideo(torrentName)
@@ -85,10 +85,7 @@ func (g *glodls) Crawler() (videos []*types.FeedVideo, err error) {
 		fVideo.Year = year
 
 		fVideo.Web = g.web
-		parse, err := url.Parse(v.Link)
-		if err != nil {
-			log.Error(err)
-		}
+		parse, _ := url.Parse(v.Link)
 		// 种子名
 		fVideo.TorrentName = torrentName
 
@@ -123,7 +120,10 @@ func (g *glodls) Crawler() (videos []*types.FeedVideo, err error) {
 		go func(video *types.FeedVideo) {
 			magnet, err := g.fetchMagnet(video.TorrentUrl)
 			if err != nil {
-				pkg.CheckError("GLODLS", err)
+				log.Error(err)
+			}
+			if magnet == "" {
+				return
 			}
 			video.Magnet = magnet
 			videos = append(videos, video)
@@ -138,26 +138,28 @@ func (g *glodls) Crawler() (videos []*types.FeedVideo, err error) {
 func (g *glodls) fetchMagnet(url string) (magnet string, err error) {
 	request, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return "", pkg.ErrGLODLSFeedMagnetFetch
+		return "", errors.WithMessage(err, "GLODLS: 磁链获取错误")
 	}
-	client := httpClient2.GetHttpClient()
+	client := httpClient2.NewHttpClient()
 	resp, err := client.Do(request)
 	if err != nil {
-		return "", pkg.ErrGLODLSFeedMagnetFetch
+		return "", errors.WithMessage(err, "GLODLS: 磁链获取错误")
 	}
 	if resp == nil {
-		return "", pkg.ErrGLODLSFeedMagnetFetch
+		return "", errors.New("GLODLS: response is nil")
 	}
 	defer resp.Body.Close()
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		return "", pkg.ErrGLODLSFeedMagnetFetch
+		return "", errors.WithMessage(err, "GLODLS: 磁链获取错误")
 	}
 	selector := "#downloadbox > table > tbody > tr > td:nth-child(1) > a:nth-child(2)"
-	magnet, _ = doc.Find(selector).Attr("href")
-
-	return
+	magnet, exists := doc.Find(selector).Attr("href")
+	if !exists {
+		return "", errors.WithMessage(err, "GLODLS: 磁链获取错误")
+	}
+	return magnet, nil
 }
 func (g *glodls) Run() {
 
@@ -169,15 +171,23 @@ func (g *glodls) Run() {
 	c := cron.New()
 	_, err := c.AddFunc(g.scheduling, func() {
 		videos, err := g.Crawler()
-		pkg.CheckError("GLODLS", err)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+
 		for _, v := range videos {
 			go func(video *types.FeedVideo) {
 				err = model.MovieDB.CreatFeedVideo(video)
 				if err != nil {
-					pkg.CheckError("GLODLS", err)
-				} else {
-					log.Infof("GLODLS: %s 保存完毕", video.Name)
+					if errors.Is(err, model.ErrorDataExist) {
+						log.Warn(err)
+						return
+					}
+					log.Error(err)
+					return
 				}
+				log.Infof("GLODLS: %s 保存完毕", video.Name)
 			}(v)
 		}
 	})

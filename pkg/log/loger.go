@@ -1,12 +1,9 @@
 package log
 
 import (
-	"os"
-	"path/filepath"
-	"strings"
-
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"os"
 )
 
 type Level int8
@@ -21,8 +18,11 @@ const (
 	FatalLevel
 )
 
-var logger *zap.SugaredLogger
-var AtomicLevel = zap.NewAtomicLevelAt(zap.DebugLevel)
+var (
+	logTmFmt    = "2006-01-02 15:04:05"
+	logger      *zap.SugaredLogger
+	AtomicLevel = zap.NewAtomicLevelAt(zap.DebugLevel)
+)
 
 func NewLogger(level string) {
 	core := newCore(level)
@@ -46,9 +46,9 @@ func newCore(level string) zapcore.Core {
 		EncodeLevel:   zapcore.CapitalColorLevelEncoder, //这里可以指定颜色
 		LineEnding:    zapcore.DefaultLineEnding,
 		//EncodeLevel:    zapcore.LowercaseLevelEncoder,  // 小写编码器
-		EncodeTime:     zapcore.ISO8601TimeEncoder,     // ISO8601 UTC 时间格式
-		EncodeDuration: zapcore.SecondsDurationEncoder, //
-		EncodeCaller:   zapcore.ShortCallerEncoder,     // 短路径编码器
+		EncodeTime:     zapcore.TimeEncoderOfLayout(logTmFmt), // ISO8601 UTC 时间格式
+		EncodeDuration: zapcore.SecondsDurationEncoder,        //
+		EncodeCaller:   zapcore.ShortCallerEncoder,            // 短路径编码器
 		// EncodeCaller:   zapcore.FullCallerEncoder,    // 全路径编码器
 		EncodeName: zapcore.FullNameEncoder,
 	}
@@ -78,31 +78,8 @@ func newCore(level string) zapcore.Core {
 		//		zapcore.NewJSONEncoder(encoderConfig), // 编码器配置
 		//zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), // 打印到控制台和文件
 		zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)), // 打印到控制台和文件
-		AtomicLevel,                                             // 日志级别
+		AtomicLevel, // 日志级别
 	)
-}
-
-func getCurrentDirectory() string {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		logger.Info(err)
-	}
-	return dir
-}
-
-func getFilePath() string {
-	logfile := getCurrentDirectory() + "/" + getAppname() + ".log"
-	return logfile
-}
-
-func getAppname() string {
-	full := os.Args[0]
-	splits := strings.Split(full, "/")
-	if len(splits) >= 1 {
-		name := splits[len(splits)-1]
-		return name
-	}
-	return ""
 }
 
 func Debug(args ...interface{}) {

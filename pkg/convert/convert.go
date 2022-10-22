@@ -3,8 +3,8 @@ package convert
 import (
 	"fmt"
 	"github.com/anacrolix/torrent/metainfo"
+	"github.com/pkg/errors"
 	"io"
-	"movieSpider/pkg"
 )
 
 func FileToMagnet(file string) (string, error) {
@@ -29,12 +29,12 @@ func FileToMagnet(file string) (string, error) {
 func IO2Magnet(r io.Reader) (string, error) {
 	mi, err := metainfo.Load(r)
 	if err != nil {
-		return "", pkg.ErrBTBTMagnetMeta
+		return "", errors.New("读取磁链meta信息错误")
 	}
 
 	info, err := mi.UnmarshalInfo()
 	if err != nil {
-		return "", pkg.ErrBTBTMagnetMarshal
+		return "", errors.New("磁链解析错误")
 	}
 	hs := mi.HashInfoBytes()
 

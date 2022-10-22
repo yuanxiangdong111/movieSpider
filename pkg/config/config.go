@@ -48,7 +48,6 @@ var (
 	BtSpider   btSpider
 	Aria2cList []aria2
 	TG         = new(tg)
-	Star       star
 	MySQL      mysql
 	DouBan     = new(douban)
 	BTBT       = new(btbt)
@@ -58,10 +57,10 @@ var (
 	Bt4G       = new(bt4g)
 	RARBG      []*rarbg
 	Downloader *downloader
+	ProxyPool  string
 )
 
 type global struct {
-	Proxy    string
 	LogLevel string
 }
 
@@ -80,11 +79,10 @@ type aria2 struct {
 type tg struct {
 	BotToken string
 	TgIDs    []int
-}
-
-type star struct {
-	Aria2cLabel string
-	Scheduling  string
+	Proxy    struct {
+		Url    string
+		Enable bool
+	}
 }
 
 type mysql struct {
@@ -100,22 +98,21 @@ type douban struct {
 	WMDBPrefix string
 }
 
-func InitConfig(config string) (err error) {
-	fmt.Printf("config file is %s.\n", config)
+func InitConfig(config string) {
 	v := viper.New()
+
+	fmt.Printf("config file is %s.\n", config)
 	v.SetConfigType("yaml")
 	b, err := ioutil.ReadFile(config)
 	if err != nil {
 		fmt.Printf("配置文件读取错误,err:%s", err.Error())
 		os.Exit(1)
-		return nil
 	}
 
 	err = v.ReadConfig(bytes.NewReader(b))
 	if err != nil {
 		fmt.Printf("配置文件错误.")
 		os.Exit(1)
-		return nil
 	}
 
 	err = v.UnmarshalKey("Global", &Global)
@@ -147,12 +144,6 @@ func InitConfig(config string) (err error) {
 	err = v.UnmarshalKey("TG", &TG)
 	if err != nil {
 		fmt.Println("读取TG配置错误")
-		os.Exit(-1)
-	}
-
-	err = v.UnmarshalKey("Star", &Star)
-	if err != nil {
-		fmt.Println("读取Star配置错误")
 		os.Exit(-1)
 	}
 
@@ -233,6 +224,11 @@ func InitConfig(config string) (err error) {
 		default:
 			v.Typ = types.ResourceTV
 		}
+	}
+
+	if err = v.UnmarshalKey("Feed.ProxyPool", &ProxyPool); err != nil {
+		fmt.Println("读取Feed.ProxyPool配置错误")
+		os.Exit(-1)
 	}
 
 	if err = v.UnmarshalKey("Downloader", &Downloader); err != nil {

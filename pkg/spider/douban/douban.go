@@ -36,7 +36,7 @@ func (d *douBan) Crawler() {
 
 	request.Header.Set("User-Agent", "go")
 
-	client := httpClient2.GetHttpClient()
+	client := httpClient2.NewHttpClient()
 	resp, err := client.Do(request)
 	if err != nil {
 		log.Error(err)

@@ -25,6 +25,8 @@ func (f *FeedVideo) FormatName(name string) string {
 	nameSlice := strings.Split(name, ".")
 	ret := removeSpaceItem(nameSlice)
 	name = strings.Join(ret, ".")
+	// 去除 -.
+	name = strings.ReplaceAll(name, ".-.", ".")
 	return name
 }
 

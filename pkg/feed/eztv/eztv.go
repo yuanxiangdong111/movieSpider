@@ -3,8 +3,8 @@ package eztv
 import (
 	"encoding/json"
 	"github.com/mmcdole/gofeed"
+	"github.com/pkg/errors"
 	"github.com/robfig/cron/v3"
-	"movieSpider/pkg"
 	"movieSpider/pkg/log"
 	"movieSpider/pkg/model"
 	"movieSpider/pkg/types"
@@ -31,12 +31,12 @@ func (f *eztv) Crawler() (videos []*types.FeedVideo, err error) {
 	fp := gofeed.NewParser()
 	fd, err := fp.ParseURL(f.url)
 	if fd == nil {
-		return nil, pkg.ErrEZTVFeedNull
+		return nil, errors.New("EZTV: 没有feed数据")
 	}
 	log.Debugf("EZTV Config: %#v", fd)
 	log.Debugf("EZTV Data: %#v", fd.String())
 	if len(fd.Items) == 0 {
-		return nil, pkg.ErrEZTVFeedNull
+		return nil, errors.New("EZTV: 没有feed数据")
 	}
 	for _, v := range fd.Items {
 		torrentName := strings.ReplaceAll(v.Title, " ", ".")
@@ -92,16 +92,22 @@ func (f *eztv) Run() {
 	c := cron.New()
 	_, err := c.AddFunc(f.scheduling, func() {
 		videos, err := f.Crawler()
-		pkg.CheckError("EZTV", err)
+		if err != nil {
+			log.Error(err)
+			return
+		}
 		for _, v := range videos {
 			go func(video *types.FeedVideo) {
 				err = model.MovieDB.CreatFeedVideo(video)
-
 				if err != nil {
-					pkg.CheckError("EZTV", err)
-				} else {
-					log.Infof("EZTV: %s 保存完毕", video.Name)
+					if errors.Is(err, model.ErrorDataExist) {
+						log.Warn(err)
+						return
+					}
+					log.Error(err)
+					return
 				}
+				log.Infof("EZTV: %s 保存完毕", video.Name)
 			}(v)
 		}
 

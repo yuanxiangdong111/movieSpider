@@ -16,16 +16,19 @@ var (
   Port: 3306
   Database: movie
   User: root
-  Password: PASSWORD
+  Password: P@ssw0rd
 
 Douban:
+  # 豆瓣电影想看清单，替换成自己的清单
   DoubanUrl: "https://movie.douban.com/people/251312920/wish"
   Scheduling: "*/5 * * * *"
+  # 豆瓣电影 公共API
   WMDBPrefix: "https://api.wmdb.tv/movie/api?id="
 Feed:
+  # 代理池 这里使用 https://github.com/jhao104/proxy_pool,  在readme中搜索 关键词 jhao104/proxy_pool
+  ProxyPool: "http://127.0.0.1:5010"
   BTBT:
     Url: https://www.btbtt12.com/forum-index-fid-951.htm
-    #    Url: https://www.btbtt12.com/forum-index-fid-951-page-5.htm
     Scheduling: "*/5 * * * *"
   EZTV:
     Scheduling: "*/5 * * * *"
@@ -34,11 +37,11 @@ Feed:
     Scheduling: "*/3 * * * *"
     Url: "https://glodls.to/rss.php?cat=1,41"
   RARBG:
-    - Scheduling: "*/10 * * * *"
-      Url: "https://rarbgprx.org/rssdd.php?categories=14;15;16;17;21;22;42;44;45;46;47;48"
+    - Scheduling: "*/3 * * * *"
+      Url: "http://rarbg.to/rssdd.php?categories=14;15;16;17;21;22;42;44;45;46;47;48"
       ResourceType: movie
-    - Scheduling: "*/5 * * * *"
-      Url: "https://rarbg.to/rssdd.php?categories=18;19;41"
+    - Scheduling: "*/2 * * * *"
+      Url: "http://rarbg.to/rssdd.php?categories=18;19;41"
       ResourceType: tv
   KNABEN:
     Url: "https://rss.knaben.eu"
@@ -46,23 +49,34 @@ Feed:
     Url: "https://bt4g.org"
 
 Global:
-  LogLevel: info
-#  Proxy: socks5://127.0.0.1:1089
+  LogLevel: debug
+
+# Downloader 下载
 Downloader:
   Scheduling: "*/1 * * * *"
+  # 使用哪个 Aria2 下载
   Aria2Label: "home"
 
+# Aria2 下载服务器
 Aria2cList:
-  - Url: "http://127.0.0.1:6800"
-    Token: TOKEN
+  - Url: "http://127.0.0.1e:6800"
+    Token: 123456
     Label: home
   - Url: "http://127.0.0.1:6801"
-    Token: TOKEN
+    Token: 123456
     Label: nas
 
-TG:
-  BotToken: "TOKEN"
-  TgIDs: [ 123456 ]
+# 如果没有Telegram 就请忽略
+#TG:
+  # Telegram 网络代理
+#  Proxy:
+#    Url: socks5://127.0.0.1:1080
+#    Enable: false
+  # Telegram 机器人 token
+#  BotToken: "TOKEN"
+#   能正常访问机器人的Telegram用户
+#  TgIDs: [ 123456 ]
+
 `
 	outFile string
 	initDB  bool

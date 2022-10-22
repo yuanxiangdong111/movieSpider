@@ -2,9 +2,9 @@ package bt4g
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/mmcdole/gofeed"
-	"movieSpider/pkg"
 	"movieSpider/pkg/log"
 	"movieSpider/pkg/model"
 	"movieSpider/pkg/types"
@@ -37,12 +37,12 @@ func (b *bt4g) Crawler() (videos []*types.FeedVideo, err error) {
 	f := gofeed.NewParser()
 	fd, err := f.ParseURL(b.url)
 	if fd == nil {
-		return nil, pkg.ErrBT4GFeedNull
+		return nil, errors.New("BT4G: 没有feed数据")
 	}
 	log.Debugf("BT4G Config: %#v", b)
 	log.Debugf("BT4G Data: %#v", fd.String())
 	if len(fd.Items) == 0 {
-		return nil, pkg.ErrBT4GFeedNull
+		return nil, errors.New("BT4G: 没有feed数据")
 	}
 	for _, v := range fd.Items {
 		// 片名
@@ -76,7 +76,12 @@ func (b *bt4g) Crawler() (videos []*types.FeedVideo, err error) {
 		go func(video *types.FeedVideo) {
 			err := model.MovieDB.CreatFeedVideo(video)
 			if err != nil {
-				pkg.CheckError("BT4G", err)
+				if errors.Is(err, model.ErrorDataExist) {
+					log.Warn(err)
+					return
+				}
+				log.Error(err)
+				return
 			}
 			log.Infof("BT4G: %s", video.TorrentName)
 		}(v)

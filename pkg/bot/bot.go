@@ -34,7 +34,7 @@ type tgBot struct {
 }
 
 func NewTgBot(BotToken string, TgIDs []int) *tgBot {
-	client := httpClient.GetHttpClient()
+	client := httpClient.NewHttpClient()
 	bot, err := tgbotapi.NewBotAPIWithClient(config.TG.BotToken, "https://api.telegram.org/bot%s/%s", client)
 	if err != nil {
 		log.Error(err)

@@ -2,18 +2,24 @@ package wmdb
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/robfig/cron/v3"
 	"github.com/tidwall/gjson"
 	"io"
-	"movieSpider/pkg"
 	"movieSpider/pkg/httpClient"
+	"movieSpider/pkg/ipProxy"
 	"movieSpider/pkg/log"
 	"movieSpider/pkg/model"
 	"movieSpider/pkg/types"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
+)
+
+var (
+	client *http.Client
 )
 
 type wmdb struct {
@@ -30,13 +36,16 @@ func NewSpiderWmdb(url, scheduling string) *wmdb {
 
 // crawlerImdb 30s 内只允许一个请求
 func (d *wmdb) crawler(doubanID string) (video *types.DouBanVideo, err error) {
+	log.Infof("WMDB: crawler Douban ID: %s", doubanID)
 	video = new(types.DouBanVideo)
+	urlStr := d.url + doubanID
+	log.Debugf("WMDB: url: %s", urlStr)
 
-	request, err := http.NewRequest(http.MethodGet, d.url+doubanID, nil)
+	request, err := http.NewRequest(http.MethodGet, urlStr, nil)
 	if err != nil {
 		return nil, nil
 	}
-	client := httpClient.GetHttpClient()
+	client = httpClient.NewHttpClient()
 	resp, err := client.Do(request)
 	if err != nil {
 		log.Error(err)
@@ -57,12 +66,17 @@ func (d *wmdb) crawler(doubanID string) (video *types.DouBanVideo, err error) {
 	rowData := string(all)
 
 	if strings.Contains(rowData, "Too Many Requests") {
-		return nil, pkg.ErrWMDBSpiderNull
+		d.switchClient()
+		return nil, errors.New(fmt.Sprintf("WMDB: 没有Spider数据,url:%s", urlStr))
 	}
 	if strings.Contains(rowData, "your requests today are full") {
-		return nil, pkg.ErrWMDBSpiderNull
+		d.switchClient()
+		return nil, errors.New(fmt.Sprintf("WMDB: 没有Spider数据,url:%s", urlStr))
 	}
-
+	if strings.Contains(rowData, "Bad Request") {
+		d.switchClient()
+		return nil, errors.New(fmt.Sprintf("WMDB: 没有Spider数据,url:%s", urlStr))
+	}
 	video.ImdbID = gjson.Get(rowData, "imdbId").String()
 	video.Type = strings.ToLower(gjson.Get(rowData, "type").String())
 	video.RowData = rowData
@@ -96,7 +110,7 @@ func (d *wmdb) Run() {
 
 		v, err := d.crawler(video.DoubanID)
 		if err != nil {
-			log.Error("WMDB", err)
+			log.Error(err)
 			return
 		}
 		video.ImdbID = v.ImdbID
@@ -120,4 +134,31 @@ func (d *wmdb) Run() {
 		os.Exit(1)
 	}
 	c.Start()
+}
+
+func (d *wmdb) switchClient() {
+	if client.Transport == nil {
+		proxyStr := ipProxy.FetchProxy()
+		if proxyStr == "" {
+			log.Info("WMDB: proxy is null.")
+			return
+		}
+
+		proxyUrl, err := url.Parse(proxyStr)
+		if err != nil {
+			log.Error(err)
+		}
+		if proxyUrl != nil {
+			proxy := http.ProxyURL(proxyUrl)
+			transport := &http.Transport{Proxy: proxy}
+			client = &http.Client{Transport: transport}
+			log.Infof("WMDB: 添加代理.")
+		} else {
+			log.Warnf("WMDB: 请添加Global.Proxy.Url配置")
+		}
+
+	} else {
+		client = &http.Client{}
+		log.Infof("WMDB: 删除代理.")
+	}
 }

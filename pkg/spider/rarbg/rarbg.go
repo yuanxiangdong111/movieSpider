@@ -41,7 +41,7 @@ func crawlerRarbg(ImdbID string) (Videos []*RarbgVideo, err error) {
 		return nil, err
 	}
 
-	client := httpClient.GetHttpClient()
+	client := httpClient.NewHttpClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err)
@@ -90,7 +90,7 @@ func crawlerRarbgMagnet(torrentUrl string) (magnet string, err error) {
 		return "", err
 	}
 
-	client := httpClient.GetHttpClient()
+	client := httpClient.NewHttpClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err)

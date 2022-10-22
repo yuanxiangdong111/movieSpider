@@ -2,6 +2,9 @@
   自动化下载电影的爬虫工具
 
 # 前置条件
+
+
+
 * 安装MySQL
 ```
 # docker run -d --restart=always  --name mysql -e MYSQL_ROOT_PASSWORD=P@ssw0rd -p 3306:3306 mysql:5.7.18
@@ -31,6 +34,57 @@
 
 
 ```
+* `jhao104/proxy_pool` 免费代理
+
+运行`redis`
+```shell
+docker run -d --name redis --restart=always -p 6379:6379  redis
+```
+
+运行 `jhao104/proxy_pool`
+有Redis密码
+```shell
+Redis_Password=123456
+Redis_Host=127.0.0.1:6379
+docker run -d --name proxy_pool --env DB_CONN=redis://:${Redis_Password}@${Redis_Host}/0 -p 5010:5010 jhao104/proxy_pool:latest
+```
+无Redis密码
+```shell
+Redis_Host=127.0.0.1:6379
+docker run -d --name proxy_pool --env DB_CONN=redis://${Redis_Host}/0 -p 5010:5010 jhao104/proxy_pool:latest
+```
+
+
+* 一把梭
+在一把梭之前请准备好配置文件
+```shell
+mkdir $PWD/movieSpider
+cp config.yaml $PWD/movieSpider
+```
+
+
+
+```shell
+export Mysql_Password=P@ssw0rd
+export Mysql_Port=3307
+export Mysql_Database=movie
+export Aria2_Password=P@ssw0rd
+export Aria2_ConfigDir=$PWD/movieSpider/aria2/config
+export Aria2_DataDir=$PWD/movieSpider/aria2/data
+export Aria2_Port=6801
+export UID=$UID
+export GID=$GID
+export MovieSpider_Dir=$PWD/movieSpider/
+docker-compose up -d 
+
+```
+
+
+
+
+
+
+
 
 * 创建豆瓣想看列表
 

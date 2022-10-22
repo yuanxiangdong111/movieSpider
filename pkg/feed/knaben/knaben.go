@@ -3,7 +3,7 @@ package knaben
 import (
 	"fmt"
 	"github.com/mmcdole/gofeed"
-	"movieSpider/pkg"
+	"github.com/pkg/errors"
 	"movieSpider/pkg/log"
 	"movieSpider/pkg/model"
 	"movieSpider/pkg/types"
@@ -39,12 +39,12 @@ func (k *knaben) Crawler() (videos []*types.FeedVideo, err error) {
 	fp := gofeed.NewParser()
 	fd, err := fp.ParseURL(k.url)
 	if fd == nil {
-		return nil, pkg.ErrKNABENFeedNull
+		return nil, errors.New("KNABEN: 没有feed数据")
 	}
-	log.Debugf("KNABEN Config: %#v", fd)
-	log.Debugf("KNABEN Data: %#v", fd.String())
+	log.Debugf("KNABEN: Config %#v", fd)
+	log.Debugf("KNABEN: Data %#v", fd.String())
 	if len(fd.Items) == 0 {
-		return nil, pkg.ErrKNABENFeedNull
+		return nil, errors.New("KNABEN: 没有feed数据")
 	}
 	for _, v := range fd.Items {
 		// 片名
@@ -89,7 +89,12 @@ func (k *knaben) Crawler() (videos []*types.FeedVideo, err error) {
 		go func(video *types.FeedVideo) {
 			err := model.MovieDB.CreatFeedVideo(video)
 			if err != nil {
-				pkg.CheckError("KNABEN", err)
+				if errors.Is(err, model.ErrorDataExist) {
+					log.Warn(err)
+					return
+				}
+				log.Error(err)
+				return
 			}
 			log.Infof("KNABEN: %s", video.TorrentName)
 		}(v)

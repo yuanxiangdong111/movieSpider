@@ -4,7 +4,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pkg/errors"
 	"github.com/robfig/cron/v3"
-	"movieSpider/pkg"
 	"movieSpider/pkg/convert"
 	"movieSpider/pkg/httpClient"
 	"movieSpider/pkg/log"
@@ -31,7 +30,7 @@ func NewFeedBTBT(url, scheduling string) *btbt {
 }
 
 func (b *btbt) Crawler() (Videos []*types.FeedVideo, err error) {
-	c := httpClient.GetHttpClient()
+	c := httpClient.NewHttpClient()
 	req, err := http.NewRequest("GET", b.url, nil)
 	if err != nil {
 		return nil, err
@@ -112,7 +111,9 @@ func (b *btbt) Crawler() (Videos []*types.FeedVideo, err error) {
 			return nil, err
 		}
 		magnet, err := getMagnet(torrentDownloadUrlStr)
-		pkg.CheckError("BTBT", err)
+		if err != nil {
+			log.Error(err)
+		}
 		v.Magnet = magnet
 		v.Web = "btbt"
 		Videos = append(Videos, v)
@@ -134,17 +135,23 @@ func (b *btbt) Run() {
 	_, err := c.AddFunc(b.scheduling, func() {
 		videos, err := b.Crawler()
 		if err != nil {
-			pkg.CheckError("BTBT", err)
+			log.Error(err)
+			return
 		}
 
 		for _, v := range videos {
 			go func(video *types.FeedVideo) {
 				err = model.MovieDB.CreatFeedVideo(video)
 				if err != nil {
-					pkg.CheckError("BTBT", err)
-				} else {
-					log.Infof("BTBT: %s 保存完毕", video.Name)
+					if errors.Is(err, model.ErrorDataExist) {
+						log.Warn(err)
+						return
+					}
+					log.Error(err)
+					return
 				}
+				log.Infof("BTBT: %s 保存完毕", video.Name)
+
 			}(v)
 		}
 	})
@@ -190,7 +197,7 @@ func moviePageUrl(pageUrl string) (url string, err error) {
 	defer resp.Body.Close()
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		return "", errors.WithMessage(pkg.ErrBTBTMoviePageBody, pageUrl)
+		return "", errors.WithMessagef(err, "BTBT: 电影页没有数据: %s", pageUrl)
 	}
 
 	doc.Find("#body > div > table:nth-child(2) > tbody > tr:nth-child(1) > td.post_td > div.attachlist > table > tbody > tr:nth-child(3) > td:nth-child(1) > a").Each(func(i int, selection *goquery.Selection) {
@@ -228,7 +235,7 @@ func getMagnet(url string) (magnet string, err error) {
 
 	resp, err := client(url)
 	if err != nil {
-		return "", errors.WithMessage(pkg.ErrBTBTMagnet, url)
+		return "", errors.WithMessagef(err, "BTBT: 获取磁链错误 %s", url)
 	}
 	defer resp.Body.Close()
 	return convert.IO2Magnet(resp.Body)
@@ -236,7 +243,7 @@ func getMagnet(url string) (magnet string, err error) {
 }
 
 func client(Url string) (resp *http.Response, err error) {
-	c := httpClient.GetHttpClient()
+	c := httpClient.NewHttpClient()
 	req, err := http.NewRequest("GET", Url, nil)
 	if err != nil {
 		return nil, err
