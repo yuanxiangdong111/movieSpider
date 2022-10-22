@@ -90,7 +90,7 @@ func (f *eztv) Run() {
 	}
 	log.Infof("EZTV Scheduling is: [%s]", f.scheduling)
 	c := cron.New()
-	_, err := c.AddFunc(f.scheduling, func() {
+	c.AddFunc(f.scheduling, func() {
 		videos, err := f.Crawler()
 		if err != nil {
 			log.Error(err)
@@ -101,7 +101,7 @@ func (f *eztv) Run() {
 				err = model.MovieDB.CreatFeedVideo(video)
 				if err != nil {
 					if errors.Is(err, model.ErrorDataExist) {
-						log.Warn(err)
+						log.Debug(err)
 						return
 					}
 					log.Error(err)
@@ -112,9 +112,5 @@ func (f *eztv) Run() {
 		}
 
 	})
-	if err != nil {
-		log.Error("EZTV: AddFunc is null")
-		os.Exit(1)
-	}
 	c.Start()
 }

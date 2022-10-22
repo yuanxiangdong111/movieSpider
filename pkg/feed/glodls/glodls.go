@@ -169,7 +169,7 @@ func (g *glodls) Run() {
 	}
 	log.Infof("GLODLS Scheduling is: [%s]", g.scheduling)
 	c := cron.New()
-	_, err := c.AddFunc(g.scheduling, func() {
+	c.AddFunc(g.scheduling, func() {
 		videos, err := g.Crawler()
 		if err != nil {
 			log.Error(err)
@@ -181,7 +181,7 @@ func (g *glodls) Run() {
 				err = model.MovieDB.CreatFeedVideo(video)
 				if err != nil {
 					if errors.Is(err, model.ErrorDataExist) {
-						log.Warn(err)
+						log.Debug(err)
 						return
 					}
 					log.Error(err)
@@ -191,10 +191,6 @@ func (g *glodls) Run() {
 			}(v)
 		}
 	})
-	if err != nil {
-		log.Error("GLODLS: AddFunc is null")
-		os.Exit(1)
-	}
 	c.Start()
 
 }

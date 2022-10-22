@@ -119,10 +119,6 @@ func (d *douBan) Run() {
 	}
 	log.Infof("DouBan Scheduling is: [%s]", d.scheduling)
 	c := cron.New()
-	_, err := c.AddFunc(d.scheduling, func() { d.Crawler() })
-	if err != nil {
-		log.Error("DouBan AddFunc is null")
-		os.Exit(1)
-	}
+	c.AddFunc(d.scheduling, func() { d.Crawler() })
 	c.Start()
 }

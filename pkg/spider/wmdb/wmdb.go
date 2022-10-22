@@ -101,7 +101,7 @@ func (d *wmdb) Run() {
 	}
 	log.Infof("WMDB Scheduling is: [%s]", d.scheduling)
 	c := cron.New()
-	_, err := c.AddFunc(d.scheduling, func() {
+	c.AddFunc(d.scheduling, func() {
 		video, err := model.MovieDB.RandomOneDouBanVideo()
 		if err != nil {
 			log.Warn("WMDB: 没有可爬取的豆瓣数据")
@@ -129,10 +129,6 @@ func (d *wmdb) Run() {
 		}
 		log.Warnf("WMDB: %s 更新完毕", video.Names)
 	})
-	if err != nil {
-		log.Error("WMDB: AddFunc is null")
-		os.Exit(1)
-	}
 	c.Start()
 }
 

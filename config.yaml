@@ -9,7 +9,7 @@ MySQL:
 Douban:
   # 豆瓣电影想看清单，替换成自己的清单
   DoubanUrl: "https://movie.douban.com/people/251312920/wish"
-  Scheduling: "*/5 * * * *"
+  Scheduling: "*/10 * * * *"
   # 豆瓣电影 公共API
   WMDBPrefix: "https://api.wmdb.tv/movie/api?id="
 Feed:
@@ -41,7 +41,7 @@ Global:
 
 # Downloader 下载
 Downloader:
-  Scheduling: "*/1 * * * *"
+  Scheduling: "*/10 * * * *"
   # 使用哪个 Aria2 下载
   Aria2Label: "home"
 

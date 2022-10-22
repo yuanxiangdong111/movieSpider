@@ -77,7 +77,7 @@ func (b *bt4g) Crawler() (videos []*types.FeedVideo, err error) {
 			err := model.MovieDB.CreatFeedVideo(video)
 			if err != nil {
 				if errors.Is(err, model.ErrorDataExist) {
-					log.Warn(err)
+					log.Debug(err)
 					return
 				}
 				log.Error(err)

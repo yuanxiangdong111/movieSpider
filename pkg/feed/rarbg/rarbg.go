@@ -54,11 +54,11 @@ func (r *rarbg) Crawler() (Videos []*types.FeedVideo, err error) {
 	fp.UserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36"
 	if r.typ == types.ResourceMovie {
 		fd, err := fp.ParseURL(r.url)
-		if err == nil {
+		if err != nil {
 			log.Error(err)
 		}
 		if fd == nil {
-			return nil, errors.New(fmt.Sprintf("RARBG: %s feed is nil.", r.typ.Typ()))
+			return nil, errors.New(fmt.Sprintf("RARBG.%s feed is nil.", r.typ.Typ()))
 		}
 		log.Debugf("RARBG movie Data: %#v", fd.String())
 		if len(fd.Items) == 0 {
@@ -245,7 +245,7 @@ func (r *rarbg) Run() {
 	}
 	log.Infof("RARBG %s: Scheduling is: [%s]", r.typ.Typ(), r.scheduling)
 	c := cron.New()
-	_, err := c.AddFunc(r.scheduling, func() {
+	c.AddFunc(r.scheduling, func() {
 		videos, err := r.Crawler()
 		if err != nil {
 			//for{
@@ -260,10 +260,6 @@ func (r *rarbg) Run() {
 		}
 		r.save2DB(videos)
 	})
-	if err != nil {
-		log.Error("RARBG: AddFunc is null")
-		os.Exit(1)
-	}
 	c.Start()
 
 }
@@ -321,7 +317,7 @@ func (r *rarbg) switchClient() {
 
 func (r *rarbg) save2DB(videos []*types.FeedVideo) {
 	if videos == nil || len(videos) == 0 {
-		log.Warnf("RARBG: %s: 没有数据", r.typ.Typ())
+		log.Warnf("RARBG.%s: 没有数据", r.typ.Typ())
 		return
 	}
 	for _, v := range videos {
@@ -329,14 +325,13 @@ func (r *rarbg) save2DB(videos []*types.FeedVideo) {
 			err := model.MovieDB.CreatFeedVideo(video)
 			if err != nil {
 				if errors.Is(err, model.ErrorDataExist) {
-					log.Warn(err)
+					log.Debug(err)
 					return
 				}
 				log.Error(err)
 				return
 			}
-			log.Infof("RARBG: %s: %s 保存完毕", r.typ.Typ(), video.Name)
-
+			log.Infof("RARBG.%s: %s 保存完毕", r.typ.Typ(), video.Name)
 		}(v)
 	}
 }

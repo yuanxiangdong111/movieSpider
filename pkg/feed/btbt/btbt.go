@@ -132,7 +132,7 @@ func (b *btbt) Run() {
 	}
 	log.Infof("BTBT: Scheduling is: [%s]", b.scheduling)
 	c := cron.New()
-	_, err := c.AddFunc(b.scheduling, func() {
+	c.AddFunc(b.scheduling, func() {
 		videos, err := b.Crawler()
 		if err != nil {
 			log.Error(err)
@@ -144,7 +144,7 @@ func (b *btbt) Run() {
 				err = model.MovieDB.CreatFeedVideo(video)
 				if err != nil {
 					if errors.Is(err, model.ErrorDataExist) {
-						log.Warn(err)
+						log.Debug(err)
 						return
 					}
 					log.Error(err)
@@ -155,10 +155,6 @@ func (b *btbt) Run() {
 			}(v)
 		}
 	})
-	if err != nil {
-		log.Error("BTBT: AddFunc is null")
-		os.Exit(1)
-	}
 	c.Start()
 
 }

@@ -123,6 +123,12 @@ func (m *movieDB) CreatDouBanVideo(video *types.DouBanVideo) (err error) {
 		return nil
 	}
 	log.Debugf("movieDB: CreatDouBanVideo %#v", video)
+
+	if video.Names == "null" {
+		log.Errorf("movieDB: CreatDouBanVideo 数据错误,%#v", video)
+		return
+	}
+
 	sql := `insert into douban_video(names,douban_id,imdb_id,row_data,type,playable,timestamp) value (?,?,?,?,?,?,?);`
 	_, err = m.db.Exec(sql,
 		video.Names,
