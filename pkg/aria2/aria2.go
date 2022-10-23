@@ -55,29 +55,41 @@ func (a *aria2) CompletedFiles() (completedFiles []*types.ReportCompletedFiles) 
 		return nil
 	}
 
+	completedFiles1 := a.completedHandler(sessionInfo, completedFiles)
+	completedFiles = append(completedFiles, completedFiles1...)
+	ActiveSession, err := a.aria2Client.TellActive()
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	completedFiles2 := a.completedHandler(ActiveSession, completedFiles)
+	completedFiles = append(completedFiles, completedFiles2...)
+	return
+}
+
+func (a *aria2) completedHandler(sessionInfo []rpc.StatusInfo, completedFiles []*types.ReportCompletedFiles) []*types.ReportCompletedFiles {
 	for _, v := range sessionInfo {
 		if len(v.Files) > 0 {
 			if strings.Contains(v.Files[0].Path, "[METADATA]") {
 				continue
 			} else {
 				// 下载了多少
-				CompletedLength, err := strconv.Atoi(v.Files[0].CompletedLength)
+				CompletedLength, err := strconv.Atoi(v.CompletedLength)
 				if err != nil {
 					log.Error(err)
 				}
 				// 文件大小
-				Length, err := strconv.Atoi(v.Files[0].Length)
+				Length, err := strconv.Atoi(v.TotalLength)
 				if err != nil {
 					log.Error(err)
 				}
+
 				//文件完成度百分比
-				completed := CompletedLength / Length * 100
-				//if completed != 100 {
-				//	continue
-				//}
+				completed := float32(CompletedLength) / float32(Length) * 100
+
 				f := new(types.ReportCompletedFiles)
 				f.GID = v.Gid
-				f.Completed = fmt.Sprintf("%d%%", completed)
+				f.Completed = fmt.Sprintf("%.2f%%", completed)
 				f.Size = fmt.Sprintf("%.2fGB", float32(Length)/1024/1024/1024)
 				_, file := path.Split(v.Files[0].Path)
 				f.FileName = file
@@ -86,5 +98,5 @@ func (a *aria2) CompletedFiles() (completedFiles []*types.ReportCompletedFiles) 
 		}
 
 	}
-	return
+	return completedFiles
 }
