@@ -6,7 +6,9 @@ import (
 	"movieSpider/pkg/feed/eztv"
 	"movieSpider/pkg/feed/glodls"
 	"movieSpider/pkg/feed/rarbg"
+	"movieSpider/pkg/feed/tgx"
 	"movieSpider/pkg/log"
+	"movieSpider/pkg/report"
 	"movieSpider/pkg/types"
 )
 
@@ -23,24 +25,32 @@ func feederTask(feeds ...Feeder) {
 
 func RunFeed() {
 	if config.EZTV != nil {
-		feedEztv := eztv.NewFeedEztv(config.EZTV.Url, config.EZTV.Scheduling)
+		feedEztv := eztv.NewFeedEztv(config.EZTV.Scheduling)
 		feederTask(feedEztv)
 	}
 
 	for _, r := range config.RARBG {
 		if r != nil {
 			log.Debug(r)
-			feedRarbg := rarbg.NewFeedRarbg(r.Url, r.Scheduling, r.Typ)
+			feedRarbg := rarbg.NewFeedRarbg(r.Scheduling, r.Typ)
 			feederTask(feedRarbg)
 		}
 	}
 	if config.GLODLS != nil {
-		feedGlodls := glodls.NewFeedGlodls(config.GLODLS.Url, config.GLODLS.Scheduling)
+		feedGlodls := glodls.NewFeedGlodls(config.GLODLS.Scheduling)
 		feederTask(feedGlodls)
 	}
 	if config.BTBT != nil {
-		feedBTBT := btbt.NewFeedBTBT(config.BTBT.Url, config.BTBT.Scheduling)
+		feedBTBT := btbt.NewFeedBTBT(config.BTBT.Scheduling)
 		feederTask(feedBTBT)
 	}
 
+	if config.TGX != nil {
+		feedBTBT := tgx.NewTGx(config.TGX.Scheduling)
+		feederTask(feedBTBT)
+	}
+
+	if config.Global.Report {
+		report.NewReport("*/1 * * * *").Run()
+	}
 }

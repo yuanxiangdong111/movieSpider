@@ -12,35 +12,28 @@ import (
 )
 
 type btbt struct {
-	Url        string `json:"Url"`
+	Scheduling string `json:"Scheduling"`
+}
+type tgx struct {
 	Scheduling string `json:"Scheduling"`
 }
 
 type eztv struct {
 	Scheduling string `json:"Scheduling"`
-	Url        string `json:"Url"`
 }
 type glodls struct {
 	Scheduling string `json:"Scheduling"`
-	Url        string `json:"Url"`
 }
 
 type rarbg struct {
 	Scheduling   string `json:"Scheduling"`
-	Url          string `json:"Url"`
 	ResourceType string `json:"ResourceType"`
 	Typ          types.Resource
 }
 
-type knaben struct {
-	Url string `json:"Url"`
-}
 type downloader struct {
 	Scheduling string `json:"Scheduling"`
 	Aria2Label string `json:"Aria2Label"`
-}
-type bt4g struct {
-	Url string `json:"Url"`
 }
 
 var (
@@ -53,8 +46,7 @@ var (
 	BTBT       = new(btbt)
 	EZTV       = new(eztv)
 	GLODLS     = new(glodls)
-	KNABEN     = new(knaben)
-	Bt4G       = new(bt4g)
+	TGX        = new(tgx)
 	RARBG      []*rarbg
 	Downloader *downloader
 	ProxyPool  string
@@ -62,6 +54,7 @@ var (
 
 type global struct {
 	LogLevel string
+	Report   bool
 }
 
 type btSpider struct {
@@ -95,7 +88,6 @@ type mysql struct {
 type douban struct {
 	DoubanUrl  string
 	Scheduling string
-	WMDBPrefix string
 }
 
 func InitConfig(config string) {
@@ -161,49 +153,26 @@ func InitConfig(config string) {
 	if !govalidator.IsURL(DouBan.DoubanUrl) {
 		DouBan.DoubanUrl = ""
 	}
-	if !govalidator.IsURL(DouBan.WMDBPrefix) {
-		DouBan.WMDBPrefix = ""
-	}
 
 	// btbt
 	if err = v.UnmarshalKey("Feed.BTBT", &BTBT); err != nil {
 		fmt.Println("读取BTBT配置错误")
 		os.Exit(-1)
 	}
-	if !govalidator.IsURL(BTBT.Url) {
-		BTBT = nil
-	}
 
 	if err = v.UnmarshalKey("Feed.EZTV", &EZTV); err != nil {
 		fmt.Println("读取EZTV配置错误")
 		os.Exit(-1)
-	}
-	if !govalidator.IsURL(EZTV.Url) {
-		EZTV = nil
 	}
 
 	if err = v.UnmarshalKey("Feed.GLODLS", &GLODLS); err != nil {
 		fmt.Println("读取GLODLS配置错误")
 		os.Exit(-1)
 	}
-	if !govalidator.IsURL(GLODLS.Url) {
-		GLODLS = nil
-	}
 
-	if err = v.UnmarshalKey("Feed.KNABEN", &KNABEN); err != nil {
-		fmt.Println("读取KNABEN配置错误")
+	if err = v.UnmarshalKey("Feed.TGX", &TGX); err != nil {
+		fmt.Println("读取TGX配置错误")
 		os.Exit(-1)
-	}
-	if !govalidator.IsURL(KNABEN.Url) {
-		KNABEN = nil
-	}
-
-	if err = v.UnmarshalKey("Feed.Bt4G", &Bt4G); err != nil {
-		fmt.Println("读取Bt4G配置错误")
-		os.Exit(-1)
-	}
-	if !govalidator.IsURL(Bt4G.Url) {
-		Bt4G = nil
 	}
 
 	if err = v.UnmarshalKey("Feed.RARBG", &RARBG); err != nil {
@@ -212,10 +181,6 @@ func InitConfig(config string) {
 	}
 
 	for _, v := range RARBG {
-		if !govalidator.IsURL(v.Url) {
-			v = nil
-			continue
-		}
 		switch v.ResourceType {
 		case "movie":
 			v.Typ = types.ResourceMovie

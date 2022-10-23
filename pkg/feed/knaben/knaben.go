@@ -15,14 +15,16 @@ import (
 	"sync"
 )
 
+const urlStr = "https://rss.knaben.eu"
+
 type knaben struct {
 	url        string
 	resolution types.Resolution
 	web        string
 }
 
-func NewFeedKnaben(knabenUrl, name string, resolution types.Resolution) *knaben {
-	parse, err := url.Parse(knabenUrl)
+func NewFeedKnaben(name string, resolution types.Resolution) *knaben {
+	parse, err := url.Parse(urlStr)
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
@@ -74,7 +76,7 @@ func (k *knaben) Crawler() (videos []*types.FeedVideo, err error) {
 				magnet := k.parseMagnet(m)
 				fVideo.Magnet = magnet
 				// 种子名
-				fVideo.TorrentName = fVideo.Name
+				fVideo.TorrentName = fVideo.FormatName(fVideo.Name)
 				videos = append(videos, fVideo)
 
 			}
@@ -90,7 +92,7 @@ func (k *knaben) Crawler() (videos []*types.FeedVideo, err error) {
 			err := model.MovieDB.CreatFeedVideo(video)
 			if err != nil {
 				if errors.Is(err, model.ErrorDataExist) {
-					log.Debug(err)
+					log.Warn(err)
 					return
 				}
 				log.Error(err)

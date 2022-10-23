@@ -21,10 +21,17 @@ type proxyData struct {
 	Source     string `json:"source"`
 }
 
-func FetchProxy() string {
+func FetchProxy(typ string) string {
 	if config.ProxyPool != "" {
-		resp, err := http.Get(fmt.Sprintf("%s/get", config.ProxyPool))
+		var urlStr string
+		if typ == "" {
+			urlStr = fmt.Sprintf("%s/get", config.ProxyPool)
+		} else {
+			urlStr = fmt.Sprintf("%s/get/?type=https", config.ProxyPool)
+		}
+		resp, err := http.Get(urlStr)
 		if err != nil {
+			log.Errorf("Feed.ProxyPool %s,err: %s", config.ProxyPool, err.Error())
 			return ""
 		}
 		buf := new(bytes.Buffer)
@@ -37,8 +44,10 @@ func FetchProxy() string {
 			log.Warnf("FetchProxy: %s.", err.Error())
 			return ""
 		}
-		return fmt.Sprintf("http://%s", data.Proxy)
-
+		if data.Proxy != "" {
+			return fmt.Sprintf("http://%s", data.Proxy)
+		}
+		return ""
 	}
 	log.Warn("FetchProxy: Global.ProxyPool没有配置.")
 	return ""

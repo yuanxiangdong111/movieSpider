@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/robfig/cron/v3"
 	"movieSpider/pkg/aria2"
+	"movieSpider/pkg/bus"
 	"movieSpider/pkg/config"
 	"movieSpider/pkg/feed/bt4g"
 	"movieSpider/pkg/feed/knaben"
@@ -15,16 +16,16 @@ import (
 	"strings"
 )
 
-type download struct {
+type Download struct {
 	scheduling string
 	types.Resolution
 }
 
-func NewDownloader(scheduling string) *download {
-	return &download{scheduling: scheduling}
+func NewDownloader(scheduling string) *Download {
+	return &Download{scheduling: scheduling}
 }
 
-func (d *download) downloadTask() {
+func (d *Download) downloadTask() {
 	err := d.downloadMovieTask()
 	if err != nil {
 		log.Error(err)
@@ -35,7 +36,7 @@ func (d *download) downloadTask() {
 	}
 }
 
-func (d *download) downloadTvTask() (err error) {
+func (d *Download) downloadTvTask() (err error) {
 	log.Info("Downloader tv working...")
 	tvs, err := model.MovieDB.FetchDouBanVideoByType(types.ResourceTV)
 	if err != nil {
@@ -67,7 +68,7 @@ func (d *download) downloadTvTask() (err error) {
 	return
 }
 
-func (d *download) downloadMovieTask() error {
+func (d *Download) downloadMovieTask() error {
 	// 获取 豆瓣 数据
 	log.Info("Downloader movie working...")
 	names, err := model.MovieDB.FetchDouBanVideoByType(types.ResourceMovie)
@@ -95,7 +96,7 @@ func (d *download) downloadMovieTask() error {
 	return err
 }
 
-func (d *download) aria2Download(vides []*types.FeedVideo) (err error) {
+func (d *Download) aria2Download(vides []*types.FeedVideo) (err error) {
 
 	newAria2, err := aria2.NewAria2(config.Downloader.Aria2Label)
 	if err != nil {
@@ -110,12 +111,18 @@ func (d *download) aria2Download(vides []*types.FeedVideo) (err error) {
 		if err != nil {
 			return err
 		}
-		log.Infof("Downloader: %s 开始下载. GID: %s", v.Name, gid)
+
+		// 通知
+		go func() {
+			bus.NotifyChan <- fmt.Sprintf("%s 开始下载. GID: %s", v.TorrentName, gid)
+		}()
+
+		log.Infof("Downloader: %s 开始下载. GID: %s", v.TorrentName, gid)
 	}
 	return nil
 }
 
-func (d *download) Run() {
+func (d *Download) Run() {
 	if d.scheduling == "" {
 		log.Error("Downloader: Scheduling is null")
 		os.Exit(1)
@@ -132,15 +139,15 @@ func (d *download) Run() {
 	c.Start()
 }
 
-func (d *download) DownloadByName(name, Resolution string) (msg string) {
+func (d *Download) DownloadByName(name, Resolution string) (msg string) {
 	// 从 knaben 搜索
-	feedKnaben := knaben.NewFeedKnaben(config.KNABEN.Url, name, d.ResolutionStr2Int(Resolution))
+	feedKnaben := knaben.NewFeedKnaben(name, d.ResolutionStr2Int(Resolution))
 	_, err := feedKnaben.Crawler()
 	if err != nil {
 		log.Error(err)
 	}
 	// 从 Bt4g 搜索
-	feedBt4g := bt4g.NewFeedBt4g(config.Bt4G.Url, name, d.ResolutionStr2Int(Resolution))
+	feedBt4g := bt4g.NewFeedBt4g(name, d.ResolutionStr2Int(Resolution))
 	_, err = feedBt4g.Crawler()
 	if err != nil {
 		log.Error(err)
@@ -175,7 +182,7 @@ func (d *download) DownloadByName(name, Resolution string) (msg string) {
 
 	return fmt.Sprintf("已将 %d 资源加入下载.", len(vides))
 }
-func (d *download) sotByResolution(videos []*types.FeedVideo) (downloadIs1 []*types.FeedVideo, downloadIs3 []*types.FeedVideo) {
+func (d *Download) sotByResolution(videos []*types.FeedVideo) (downloadIs1 []*types.FeedVideo, downloadIs3 []*types.FeedVideo) {
 	var Videos2160P []*types.FeedVideo
 	var Videos1080P []*types.FeedVideo
 	for _, v := range videos {
@@ -191,8 +198,9 @@ func (d *download) sotByResolution(videos []*types.FeedVideo) (downloadIs1 []*ty
 			downloadIs3 = append(downloadIs3, v)
 		}
 	}
+
 	// 如果 Videos2160P 有 数据
-	if len(Videos2160P) >= 0 {
+	if len(Videos2160P) > 0 {
 		// 如果 Videos2160P 有大于2个片源
 		if len(Videos2160P) >= 2 {
 			// 前两个放到 downloadIs1 列表
@@ -208,13 +216,12 @@ func (d *download) sotByResolution(videos []*types.FeedVideo) (downloadIs1 []*ty
 		}
 
 	} else {
-		if len(Videos2160P) >= 2 {
+		if len(Videos1080P) >= 2 {
 			downloadIs1 = append(downloadIs1, Videos1080P[0:2]...)
 			downloadIs3 = append(downloadIs3, Videos1080P[2:]...)
 		} else {
 			downloadIs1 = append(downloadIs1, Videos1080P...)
 		}
-
 	}
 	return
 }

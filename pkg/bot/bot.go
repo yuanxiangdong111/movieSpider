@@ -4,64 +4,77 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
+	"movieSpider/pkg/aria2"
+	"movieSpider/pkg/bus"
 	"movieSpider/pkg/config"
 	"movieSpider/pkg/download"
 	"movieSpider/pkg/httpClient"
 	"movieSpider/pkg/log"
+	"movieSpider/pkg/model"
 	"movieSpider/pkg/types"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var (
 	pageNum    *int
 	Resolution types.Resolution
+	TgBot      *TGBot
+	once       sync.Once
 )
 
 const (
 	//MovieListCMD    = "/movie_list"
-	MoveDownloadCMD = "/movie_download"
-	//DownloadCMD     = "/download"
+	CMDMoveDownload     = "/movie_download"
+	CMDReportDownload   = "/report_download"
+	CMDReportFeedVideos = "/report_feedvioes"
 	//StartMovieCMD   = "/star_movie"
 	//StarListCMD     = "/star_list"
 )
 
-type tgBot struct {
+type TGBot struct {
 	botToken string
 	IDs      []int
 	bot      *tgbotapi.BotAPI
 }
 
-func NewTgBot(BotToken string, TgIDs []int) *tgBot {
-	client := httpClient.NewHttpClient()
-	bot, err := tgbotapi.NewBotAPIWithClient(config.TG.BotToken, "https://api.telegram.org/bot%s/%s", client)
-	if err != nil {
-		log.Error(err)
-		os.Exit(-1)
-	}
-	return &tgBot{
-		BotToken, TgIDs, bot,
-	}
+func NewTgBot(BotToken string, TgIDs []int) (TgBot *TGBot) {
+	once.Do(func() {
+		client := httpClient.NewHttpClient()
+		bot, err := tgbotapi.NewBotAPIWithClient(config.TG.BotToken, "https://api.telegram.org/bot%s/%s", client)
+		if err != nil {
+			log.Error(err)
+			os.Exit(-1)
+		}
+		TgBot = &TGBot{
+			BotToken, TgIDs, bot,
+		}
+	})
+	return TgBot
 }
 
-func (t *tgBot) StartBot() {
-	//var err error
-	//
-	//var (
-	//	isMovie bool
-	//	//isStar  bool
-	//)
+func (t *TGBot) StartBot() {
 
-	//bot.Debug = true
+	// 发送通知
+	go func() {
+		for {
+			notifyChan, ok := <-bus.NotifyChan
+			if ok {
+				log.Infof(notifyChan)
+				t.SendStrMsg(notifyChan)
+			} else {
+				return
+			}
+		}
+	}()
 
 	log.Infof("Authorized on account %s", t.bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-
 	updates := t.bot.GetUpdatesChan(u)
-
 	for update := range updates {
 
 		index := 1
@@ -82,17 +95,64 @@ func (t *tgBot) StartBot() {
 			//		log.Error(err)
 			//		continue
 			//	}
-			// movie_download 指令
-			case strings.Contains(update.Message.Text, MoveDownloadCMD):
+			case strings.Contains(update.Message.Text, CMDReportDownload):
 				// 如果参数长度不够直接continue 防止地址越界
-				pars, ok := t.checkPars(update.Message.Text, update.Message.Chat.ID, update, MoveDownloadCMD)
+				_, ok := t.checkPars(update.Message.Text, update.Message.Chat.ID, update, CMDReportDownload)
+				if !ok {
+					continue
+				}
+				if aria2.Aria2 == nil {
+					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "aria2下载器服务异常")
+					msg.ReplyToMessageID = update.Message.MessageID
+					if _, err := t.bot.Send(msg); err != nil {
+						log.Error(err)
+					}
+					continue
+				}
+				files := aria2.Aria2.CompletedFiles()
+				var bs string
+				for _, file := range files {
+					bs += fmt.Sprintf("%-40s | %s\n", file.FileName[0:40], file.Completed)
+				}
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, bs)
+				msg.ReplyToMessageID = update.Message.MessageID
+				if _, err := t.bot.Send(msg); err != nil {
+					log.Error(err)
+				}
+
+			case strings.Contains(update.Message.Text, CMDReportFeedVideos):
+				_, ok := t.checkPars(update.Message.Text, update.Message.Chat.ID, update, CMDReportFeedVideos)
+				if !ok {
+					continue
+				}
+
+				count, err := model.MovieDB.CountFeedVideo()
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+				var s string
+				var Total int
+				for _, reportCount := range count {
+					Total += reportCount.Count
+					s += fmt.Sprintf("%s: %d ", reportCount.Web, reportCount.Count)
+				}
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Total: %d  %s", Total, s))
+				msg.ReplyToMessageID = update.Message.MessageID
+				if _, err := t.bot.Send(msg); err != nil {
+					log.Error(err)
+				}
+
+			// movie_download 指令
+			case strings.Contains(update.Message.Text, CMDMoveDownload):
+				// 如果参数长度不够直接continue 防止地址越界
+				pars, ok := t.checkPars(update.Message.Text, update.Message.Chat.ID, update, CMDMoveDownload)
 				if !ok {
 					continue
 				}
 
 				downloader := download.NewDownloader(config.Downloader.Scheduling)
 				downloadMsg := downloader.DownloadByName(pars[1], pars[2])
-				fmt.Println(downloadMsg)
 
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, downloadMsg)
 				msg.ReplyToMessageID = update.Message.MessageID
@@ -199,9 +259,19 @@ func (t *tgBot) StartBot() {
 		//}
 
 	}
+
 }
 
-//func (t *tgBot) StarCallbackQuery(update tgbotapi.Update) error {
+func (t *TGBot) SendStrMsg(msg string) {
+	for _, id := range t.IDs {
+		tgMsg := tgbotapi.NewMessage(int64(id), msg)
+		if _, err := t.bot.Send(tgMsg); err != nil {
+			log.Error(err)
+		}
+	}
+}
+
+//func (t *TGBot) StarCallbackQuery(update tgbotapi.Update) error {
 //	pg, err := strconv.Atoi(update.CallbackQuery.Data)
 //	if err != nil {
 //		return err
@@ -226,7 +296,7 @@ func (t *tgBot) StartBot() {
 //	return nil
 //}
 
-//func (t *tgBot) MovesCallbackQuery(update tgbotapi.Update) error {
+//func (t *TGBot) MovesCallbackQuery(update tgbotapi.Update) error {
 //	pg, err := strconv.Atoi(update.CallbackQuery.Data)
 //	if err != nil {
 //		return err
@@ -321,7 +391,7 @@ func inArray(val int, array []int) (ok bool, i int) {
 	return
 }
 
-func (t *tgBot) checkUser(ChatID int64, update tgbotapi.Update) bool {
+func (t *TGBot) checkUser(ChatID int64, update tgbotapi.Update) bool {
 	ok, _ := inArray(int(ChatID), config.TG.TgIDs)
 	if !ok {
 		msg := tgbotapi.NewMessage(ChatID, "您没有权限")
@@ -335,11 +405,11 @@ func (t *tgBot) checkUser(ChatID int64, update tgbotapi.Update) bool {
 	return ok
 }
 
-func (t *tgBot) checkPars(pars string, ChatID int64, update tgbotapi.Update, cmd string) ([]string, bool) {
+func (t *TGBot) checkPars(pars string, ChatID int64, update tgbotapi.Update, cmd string) ([]string, bool) {
 	log.Infof("Msg: %s", update.Message.Text)
 	cmdAndargs := removeSpaceItem(strings.Split(pars, " "))
 	switch cmd {
-	case MoveDownloadCMD:
+	case CMDMoveDownload:
 		if len(strings.Split(pars, " ")) < 2 {
 			msg := tgbotapi.NewMessage(ChatID, "参数长度不够")
 			msg.ReplyToMessageID = update.Message.MessageID
@@ -349,6 +419,10 @@ func (t *tgBot) checkPars(pars string, ChatID int64, update tgbotapi.Update, cmd
 			}
 			log.Warnf("参数长度不够")
 		}
+		return cmdAndargs, true
+	case CMDReportFeedVideos:
+		return cmdAndargs, true
+	case CMDReportDownload:
 		return cmdAndargs, true
 	default:
 		return cmdAndargs, false

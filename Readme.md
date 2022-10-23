@@ -1,9 +1,27 @@
 # movieSpider
-  自动化下载电影的爬虫工具
+  
+ 自动化下载电影的爬虫工具
 
-# 前置条件
+支持的`Torrent`站点
+* bt4g
+* btbt
+* eztv
+* glodls
+* knaben
+* rarbg
+* TGx
 
+如果要使用 TG bot， 请添加如下指令
 
+Telegram bot 指令如下
+
+```shell
+movie_download - 下载电影  电影名  清晰度
+report_download - 报告下载状态
+report_feedvioes - 报告Feed资源
+```
+
+# 部署
 
 * 安装MySQL
 ```

@@ -13,7 +13,7 @@ func Test_bt4g_Crawler(t *testing.T) {
 	model.NewMovieDB()
 	//https: //bt4g.org/search/%E9%BE%99%E4%B9%8B%E5%AE%B6%E6%97%8F?page=rss
 	//https://bt4g.org/search/%E9%BE%99%E4%B9%8B%E5%AE%B6%E6%97%8F?page=rss
-	b := NewFeedBt4g(config.Bt4G.Url, "杀手疾风号", types.ResolutionOther)
+	b := NewFeedBt4g("杀手疾风号", types.ResolutionOther)
 
 	gotVideos, err := b.Crawler()
 	if err != nil {

@@ -23,10 +23,8 @@ func RunSpider() {
 			spiderDouBan := douban.NewSpiderDouBan(config.DouBan.DoubanUrl, config.DouBan.Scheduling)
 			spiderTask(spiderDouBan)
 		}
-		if config.DouBan.WMDBPrefix != "" {
-			spiderWmdb := wmdb.NewSpiderWmdb(config.DouBan.WMDBPrefix, config.DouBan.Scheduling)
-			spiderTask(spiderWmdb)
-		}
+		spiderWmdb := wmdb.NewSpiderWmdb(config.DouBan.Scheduling)
+		spiderTask(spiderWmdb)
 	}
 
 }

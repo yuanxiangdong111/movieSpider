@@ -213,7 +213,7 @@ func Test_feed(t *testing.T) {
 func Test_rarbg_Crawler(t *testing.T) {
 	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 	model.NewMovieDB()
-	feedRarbg := NewFeedRarbg("http://rarbg.to/rssdd.php?categories=14;15;16;17;21;22;42;44;45;46;47;48", "*/1 * * * *", types.ResourceMovie)
+	feedRarbg := NewFeedRarbg("*/1 * * * *", types.ResourceMovie)
 	//feedRarbg := NewFeedRarbg("http://rarbg.to/rssdd.php?categories=18;19;41", "*/1 * * * *", types.ResourceTV)
 	feedRarbg.useProxyClient()
 	feedRarbg.Run()

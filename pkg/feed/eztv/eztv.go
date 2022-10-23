@@ -14,16 +14,18 @@ import (
 	"strings"
 )
 
+const urlStr = "https://eztv.re/ezrss.xml"
+
 type eztv struct {
 	scheduling string
 	url        string
 	web        string
 }
 
-func NewFeedEztv(url, scheduling string) *eztv {
+func NewFeedEztv(scheduling string) *eztv {
 	return &eztv{
 		scheduling,
-		url,
+		urlStr,
 		"eztv",
 	}
 }
@@ -69,9 +71,9 @@ func (f *eztv) Crawler() (videos []*types.FeedVideo, err error) {
 		fVideo.Year = year
 
 		// 片名
-		fVideo.Name = name
+		fVideo.Name = fVideo.FormatName(name)
 		// 种子名
-		fVideo.TorrentName = torrentName
+		fVideo.TorrentName = fVideo.FormatName(torrentName)
 		fVideo.TorrentUrl = v.Link
 		fVideo.Magnet = v.Extensions["torrent"]["magnetURI"][0].Value
 		bytes, _ := json.Marshal(v)
@@ -101,7 +103,7 @@ func (f *eztv) Run() {
 				err = model.MovieDB.CreatFeedVideo(video)
 				if err != nil {
 					if errors.Is(err, model.ErrorDataExist) {
-						log.Debug(err)
+						log.Warn(err)
 						return
 					}
 					log.Error(err)

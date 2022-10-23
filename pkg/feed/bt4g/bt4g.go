@@ -15,21 +15,24 @@ import (
 	"sync"
 )
 
+const (
+	urlStr = "https://bt4g.org"
+)
+
 type bt4g struct {
-	url string
-	//typ        types.Resource
+	url        string
 	resolution types.Resolution
 	web        string
 }
 
-func NewFeedBt4g(urlStr, name string, resolution types.Resolution) *bt4g {
+func NewFeedBt4g(name string, resolution types.Resolution) *bt4g {
 	parse, err := url.Parse(urlStr)
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
 	}
 	//strData := url.QueryEscape(name)
-	bUrl := fmt.Sprintf("%s://%s/search/%s?page=rss", parse.Scheme, parse.Host, name)
+	bUrl := fmt.Sprintf("%s://%s/search/%s/bysize/1?page=rss", parse.Scheme, parse.Host, name)
 	return &bt4g{url: bUrl, resolution: resolution, web: "bt4g"}
 }
 
@@ -57,7 +60,7 @@ func (b *bt4g) Crawler() (videos []*types.FeedVideo, err error) {
 
 		fVideo := new(types.FeedVideo)
 		fVideo.Web = b.web
-		fVideo.Name = name
+		fVideo.Name = fVideo.FormatName(name)
 		fVideo.Magnet = v.Link
 		// 种子名
 		fVideo.TorrentName = fVideo.Name
@@ -77,7 +80,7 @@ func (b *bt4g) Crawler() (videos []*types.FeedVideo, err error) {
 			err := model.MovieDB.CreatFeedVideo(video)
 			if err != nil {
 				if errors.Is(err, model.ErrorDataExist) {
-					log.Debug(err)
+					log.Warn(err)
 					return
 				}
 				log.Error(err)

@@ -16,15 +16,17 @@ import (
 	"sync"
 )
 
+const urlStr = "https://www.btbtt12.com/forum-index-fid-951.htm"
+
 type btbt struct {
 	url        string
 	scheduling string
 }
 
-func NewFeedBTBT(url, scheduling string) *btbt {
+func NewFeedBTBT(scheduling string) *btbt {
 
 	return &btbt{
-		url,
+		urlStr,
 		scheduling,
 	}
 }
@@ -144,7 +146,7 @@ func (b *btbt) Run() {
 				err = model.MovieDB.CreatFeedVideo(video)
 				if err != nil {
 					if errors.Is(err, model.ErrorDataExist) {
-						log.Debug(err)
+						log.Warn(err)
 						return
 					}
 					log.Error(err)

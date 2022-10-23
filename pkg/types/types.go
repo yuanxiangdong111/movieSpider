@@ -50,3 +50,15 @@ type DouBanVideo struct {
 	Type     string `json:"type"`     // tv或movie
 	Playable string `json:"playable"` //是否可以播放
 }
+
+type ReportCount struct {
+	Web   string `json:"web"`
+	Count int    `json:"count"`
+}
+
+type ReportCompletedFiles struct {
+	GID       string
+	Size      string
+	Completed string
+	FileName  string
+}

@@ -22,14 +22,16 @@ var (
 	client *http.Client
 )
 
+const urlStr = "https://api.wmdb.tv/movie/api?id="
+
 type wmdb struct {
 	url        string
 	scheduling string
 }
 
-func NewSpiderWmdb(url, scheduling string) *wmdb {
+func NewSpiderWmdb(scheduling string) *wmdb {
 	return &wmdb{
-		url,
+		urlStr,
 		scheduling,
 	}
 }
@@ -66,15 +68,12 @@ func (d *wmdb) crawler(doubanID string) (video *types.DouBanVideo, err error) {
 	rowData := string(all)
 
 	if strings.Contains(rowData, "Too Many Requests") {
-		d.switchClient()
 		return nil, errors.New(fmt.Sprintf("WMDB: 没有Spider数据,url:%s", urlStr))
 	}
 	if strings.Contains(rowData, "your requests today are full") {
-		d.switchClient()
 		return nil, errors.New(fmt.Sprintf("WMDB: 没有Spider数据,url:%s", urlStr))
 	}
 	if strings.Contains(rowData, "Bad Request") {
-		d.switchClient()
 		return nil, errors.New(fmt.Sprintf("WMDB: 没有Spider数据,url:%s", urlStr))
 	}
 	video.ImdbID = gjson.Get(rowData, "imdbId").String()
@@ -111,35 +110,28 @@ func (d *wmdb) Run() {
 		v, err := d.crawler(video.DoubanID)
 		if err != nil {
 			log.Error(err)
+			d.switchClient()
+			v, err := d.crawler(video.DoubanID)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			d.updateVideo(video, v)
 			return
 		}
-		video.ImdbID = v.ImdbID
-		video.RowData = v.RowData
-		if v.Type == "TVSeries" {
-			video.Type = "tv"
-		} else {
-			video.Type = v.Type
-		}
+		d.updateVideo(video, v)
 
-		video.Names = v.Names
-		err = model.MovieDB.UpDateDouBanVideo(video)
-		if err != nil {
-			log.Error(err)
-			return
-		}
-		log.Warnf("WMDB: %s 更新完毕", video.Names)
 	})
 	c.Start()
 }
 
 func (d *wmdb) switchClient() {
 	if client.Transport == nil {
-		proxyStr := ipProxy.FetchProxy()
+		proxyStr := ipProxy.FetchProxy("https")
 		if proxyStr == "" {
 			log.Info("WMDB: proxy is null.")
 			return
 		}
-
 		proxyUrl, err := url.Parse(proxyStr)
 		if err != nil {
 			log.Error(err)
@@ -148,7 +140,7 @@ func (d *wmdb) switchClient() {
 			proxy := http.ProxyURL(proxyUrl)
 			transport := &http.Transport{Proxy: proxy}
 			client = &http.Client{Transport: transport}
-			log.Infof("WMDB: 添加代理.")
+			log.Infof("WMDB: 添加代理.%s", proxyStr)
 		} else {
 			log.Warnf("WMDB: 请添加Global.Proxy.Url配置")
 		}
@@ -157,4 +149,22 @@ func (d *wmdb) switchClient() {
 		client = &http.Client{}
 		log.Infof("WMDB: 删除代理.")
 	}
+}
+func (d *wmdb) updateVideo(video *types.DouBanVideo, crawlerVideo *types.DouBanVideo) {
+	video.ImdbID = crawlerVideo.ImdbID
+	video.RowData = crawlerVideo.RowData
+	if strings.ToLower(crawlerVideo.Type) == "tvseries" {
+		video.Type = "tv"
+	} else {
+		video.Type = crawlerVideo.Type
+	}
+
+	video.Names = crawlerVideo.Names
+
+	err := model.MovieDB.UpdateDouBanVideo(video)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.Warnf("WMDB: %s 更新完毕", video.Names)
 }

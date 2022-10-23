@@ -21,15 +21,17 @@ import (
 	"sync"
 )
 
+const urlStr = "https://glodls.to/rss.php?cat=1,41"
+
 type glodls struct {
 	url        string
 	scheduling string
 	web        string
 }
 
-func NewFeedGlodls(url, scheduling string) *glodls {
+func NewFeedGlodls(scheduling string) *glodls {
 	return &glodls{
-		url,
+		urlStr,
 		scheduling,
 		"glodls",
 	}
@@ -87,7 +89,7 @@ func (g *glodls) Crawler() (videos []*types.FeedVideo, err error) {
 		fVideo.Web = g.web
 		parse, _ := url.Parse(v.Link)
 		// 种子名
-		fVideo.TorrentName = torrentName
+		fVideo.TorrentName = fVideo.FormatName(torrentName)
 
 		if len(parse.Query()["id"]) == 0 {
 			log.Error("没有ID")
@@ -181,7 +183,7 @@ func (g *glodls) Run() {
 				err = model.MovieDB.CreatFeedVideo(video)
 				if err != nil {
 					if errors.Is(err, model.ErrorDataExist) {
-						log.Debug(err)
+						log.Warn(err)
 						return
 					}
 					log.Error(err)

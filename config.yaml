@@ -7,37 +7,31 @@ MySQL:
   Password: P@ssw0rd
 
 Douban:
-  # 豆瓣电影想看清单，替换成自己的清单
+  # 豆瓣电影想看清单
   DoubanUrl: "https://movie.douban.com/people/251312920/wish"
   Scheduling: "*/10 * * * *"
   # 豆瓣电影 公共API
   WMDBPrefix: "https://api.wmdb.tv/movie/api?id="
 Feed:
-  # 代理池 这里使用 https://github.com/jhao104/proxy_pool,  在readme中搜索 关键词 jhao104/proxy_pool
+  # 代理池 这里使用 https://github.com/jhao104/proxy_pool
   ProxyPool: "http://127.0.0.1:5010"
   BTBT:
-    Url: https://www.btbtt12.com/forum-index-fid-951.htm
     Scheduling: "*/5 * * * *"
   EZTV:
     Scheduling: "*/5 * * * *"
-    Url: "https://eztv.re/ezrss.xml"
   GLODLS:
     Scheduling: "*/3 * * * *"
-    Url: "https://glodls.to/rss.php?cat=1,41"
+  TGX:
+    Scheduling: "*/3 * * * *"
   RARBG:
     - Scheduling: "*/3 * * * *"
-      Url: "http://rarbg.to/rssdd.php?categories=14;15;16;17;21;22;42;44;45;46;47;48"
       ResourceType: movie
     - Scheduling: "*/2 * * * *"
-      Url: "http://rarbg.to/rssdd.php?categories=18;19;41"
       ResourceType: tv
-  KNABEN:
-    Url: "https://rss.knaben.eu"
-  Bt4G:
-    Url: "https://bt4g.org"
 
 Global:
   LogLevel: info
+  Report: true
 
 # Downloader 下载
 Downloader:

@@ -19,6 +19,11 @@ import (
 	"time"
 )
 
+const (
+	urlMovie = "http://rarbg.to/rssdd.php?categories=14;15;16;17;21;22;42;44;45;46;47;48"
+	urlTV    = "http://rarbg.to/rssdd.php?categories=18;19;41"
+)
+
 type rarbg struct {
 	typ        types.Resource
 	url        string
@@ -27,12 +32,12 @@ type rarbg struct {
 	httpClient *http.Client
 }
 
-func NewFeedRarbg(url, scheduling string, resourceType types.Resource) *rarbg {
+func NewFeedRarbg(scheduling string, resourceType types.Resource) *rarbg {
 
 	if resourceType == types.ResourceMovie {
 		return &rarbg{
 			resourceType,
-			url,
+			urlMovie,
 			"rarbg",
 			scheduling,
 			&http.Client{},
@@ -40,7 +45,7 @@ func NewFeedRarbg(url, scheduling string, resourceType types.Resource) *rarbg {
 	} else {
 		return &rarbg{
 			resourceType,
-			url,
+			urlTV,
 			"rarbg",
 			scheduling,
 			&http.Client{},
@@ -60,9 +65,9 @@ func (r *rarbg) Crawler() (Videos []*types.FeedVideo, err error) {
 		if fd == nil {
 			return nil, errors.New(fmt.Sprintf("RARBG.%s feed is nil.", r.typ.Typ()))
 		}
-		log.Debugf("RARBG movie Data: %#v", fd.String())
+		log.Debugf("RARBG.movie Data: %#v", fd.String())
 		if len(fd.Items) == 0 {
-			return nil, errors.New(fmt.Sprintf("RARBG: 没有movie feed数据."))
+			return nil, errors.New(fmt.Sprintf("RARBG.movie: 没有feed数据."))
 		}
 		compileRegex := regexp.MustCompile("(.*)\\.([0-9][0-9][0-9][0-9])\\.")
 		for _, v := range fd.Items {
@@ -100,11 +105,11 @@ func (r *rarbg) Crawler() (Videos []*types.FeedVideo, err error) {
 	if r.typ == types.ResourceTV {
 		fd, _ := fp.ParseURL(r.url)
 		if fd == nil {
-			return nil, errors.New("RARBG: 没有tv feed数据")
+			return nil, errors.New("RARBG.tv: 没有feed数据")
 		}
-		log.Debugf("RARBG tv Data: %#v", fd.String())
+		log.Debugf("RARBG.tv Data: %#v", fd.String())
 		if len(fd.Items) == 0 {
-			return nil, errors.New("RARBG: 没有tv feed数据")
+			return nil, errors.New("RARBG.tv: 没有feed数据")
 		}
 		compileRegex := regexp.MustCompile("(.*)\\.[sS][0-9][0-9]|[Ee][0-9][0-9]?\\.")
 		for _, v := range fd.Items {
@@ -118,7 +123,7 @@ func (r *rarbg) Crawler() (Videos []*types.FeedVideo, err error) {
 			matchArr := compileRegex.FindStringSubmatch(name)
 
 			var fVideo types.FeedVideo
-			fVideo.TorrentName = name
+			fVideo.TorrentName = fVideo.FormatName(name)
 			fVideo.Magnet = v.Link
 			fVideo.Type = "tv"
 			// 原始数据
@@ -129,7 +134,7 @@ func (r *rarbg) Crawler() (Videos []*types.FeedVideo, err error) {
 			if len(matchArr) > 0 {
 				fVideo.Name = matchArr[1]
 			} else {
-				fVideo.Name = name
+				fVideo.Name = fVideo.FormatName(name)
 			}
 			Videos = append(Videos, &fVideo)
 		}
@@ -248,7 +253,21 @@ func (r *rarbg) Run() {
 	c.AddFunc(r.scheduling, func() {
 		videos, err := r.Crawler()
 		if err != nil {
-			//for{
+			//for {
+			//	r.switchClient()
+			//	videos, err = r.Crawler()
+			//	if err != nil {
+			//		log.Error(err)
+			//		return
+			//	}
+			//	if len(videos) == 0 {
+			//		continue
+			//	} else {
+			//		r.save2DB(videos)
+			//		break
+			//	}
+			//
+			//}
 			r.switchClient()
 			videos, err = r.Crawler()
 			if err != nil {
@@ -256,7 +275,6 @@ func (r *rarbg) Run() {
 				return
 			}
 			r.save2DB(videos)
-			//}
 		}
 		r.save2DB(videos)
 	})
@@ -265,7 +283,7 @@ func (r *rarbg) Run() {
 }
 
 func (r *rarbg) useProxyClient() {
-	proxyStr := ipProxy.FetchProxy()
+	proxyStr := ipProxy.FetchProxy("")
 	if proxyStr == "" {
 		log.Error("useProxyClient: proxy is null")
 		return
@@ -290,7 +308,7 @@ func (r *rarbg) useProxyClient() {
 func (r *rarbg) switchClient() {
 	if r.httpClient.Transport == nil {
 
-		proxyStr := ipProxy.FetchProxy()
+		proxyStr := ipProxy.FetchProxy("")
 		if proxyStr == "" {
 			log.Infof("RARBG.%s: proxy is null.", r.typ.Typ())
 			return
@@ -304,7 +322,7 @@ func (r *rarbg) switchClient() {
 			transport := &http.Transport{Proxy: proxy}
 			httpClient := &http.Client{Transport: transport, Timeout: time.Minute * 5}
 			r.httpClient = httpClient
-			log.Infof("RARBG.%s: 添加代理. proxyStr: %s", r.typ.Typ(), proxyUrl)
+			log.Infof("RARBG.%s: 添加代理. proxy: %s", r.typ.Typ(), proxyUrl)
 		} else {
 			log.Warnf("RARBG.%s: 请添加Global.Proxy.Url配置", r.typ.Typ())
 		}
@@ -325,7 +343,7 @@ func (r *rarbg) save2DB(videos []*types.FeedVideo) {
 			err := model.MovieDB.CreatFeedVideo(video)
 			if err != nil {
 				if errors.Is(err, model.ErrorDataExist) {
-					log.Debug(err)
+					log.Warn(err)
 					return
 				}
 				log.Error(err)

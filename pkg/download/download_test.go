@@ -9,8 +9,8 @@ import (
 func Test_download_Run(t *testing.T) {
 	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 	model.NewMovieDB()
-	d := &download{
-		scheduling: "tt.fields.scheduling",
+	d := &Download{
+		scheduling: "The.Peripheral",
 	}
 	d.Run()
 }
@@ -18,7 +18,7 @@ func Test_download_Run(t *testing.T) {
 func Test_download_DownloadByName(t *testing.T) {
 	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 	model.NewMovieDB()
-	d := &download{
+	d := &Download{
 		scheduling: "tt.fields.scheduling",
 	}
 	d.DownloadByName("House.Of.The.Dragon", "1080")
@@ -27,7 +27,7 @@ func Test_download_DownloadByName(t *testing.T) {
 func Test_download_DownloadByName1(t *testing.T) {
 	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 	model.NewMovieDB()
-	d := &download{
+	d := &Download{
 		scheduling: "tt.fields.scheduling",
 	}
 	d.DownloadByName("Werewolf.by.Night", "2160")
@@ -36,7 +36,8 @@ func Test_download_DownloadByName1(t *testing.T) {
 func Test_download_downloadTvTask(t *testing.T) {
 	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 	model.NewMovieDB()
-	d := &download{
+
+	d := &Download{
 		scheduling: "tt.fields.scheduling",
 	}
 	err := d.downloadTvTask()

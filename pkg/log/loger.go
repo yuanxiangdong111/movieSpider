@@ -30,7 +30,7 @@ func NewLogger(level string) {
 	logger = l.Sugar()
 	logger.Sync()
 
-	//return zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1), zap.Development(), zap.AddStacktrace(zap.ErrorLevel)))
+	//return zap.New(bus, zap.AddCaller(), zap.AddCallerSkip(1), zap.Development(), zap.AddStacktrace(zap.ErrorLevel)))
 
 }
 

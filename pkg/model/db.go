@@ -97,12 +97,12 @@ func (m *movieDB) CreatFeedVideo(video *types.FeedVideo) (err error) {
 		time.Now().Unix())
 	if err != nil {
 		if strings.Contains(err.Error(), "Duplicate entry") {
-			log.Debugf("movieDB: CreatFeedVideo name: %s type: %s", video.Name, video.Type)
+			log.Debugf("movieDB: CreatFeedVideo 数据已存在 video: %#v", video)
 			return errors.WithMessagef(ErrorDataExist, "movieDB: name: %s type: %s", video.Name, video.Type)
 		}
 		return errors.WithMessage(err, video.Name)
-
 	}
+	log.Debugf("movieDB: CreatFeedVideo 数据已添加 video: %#v", video)
 	return
 }
 func (m *movieDB) CreatDouBanVideo(video *types.DouBanVideo) (err error) {
@@ -111,21 +111,19 @@ func (m *movieDB) CreatDouBanVideo(video *types.DouBanVideo) (err error) {
 		log.Warn(err)
 	}
 	if v != nil {
-		log.Debugf("movieDB: CreatDouBanVideo已存在 %#v ", v)
+		log.Debugf("movieDB: CreatDouBanVideo已存在 %#v", v)
 		// 将该记录变更为 可播放
 		if v.Playable != video.Playable {
 			v.Playable = video.Playable
 			log.Debugf("movieDB: FetchOneDouBanVideoByDouBanID %#v", v)
-			err = m.UpDateDouBanVideo(v)
-			return errors.WithMessagef(err, "UpDateDouBanVideo %s", v.Names)
+			err = m.UpdateDouBanVideo(v)
+			return errors.WithMessagef(err, "UpdateDouBanVideo %s", v.Names)
 		}
-
 		return nil
 	}
-	log.Debugf("movieDB: CreatDouBanVideo %#v", video)
 
 	if video.Names == "null" {
-		log.Errorf("movieDB: CreatDouBanVideo 数据错误,%#v", video)
+		log.Errorf("movieDB: CreatDouBanVideo 数据错误. video: %#v", video)
 		return
 	}
 
@@ -143,6 +141,7 @@ func (m *movieDB) CreatDouBanVideo(video *types.DouBanVideo) (err error) {
 	if err != nil {
 		return errors.WithMessage(err, video.Names)
 	}
+	log.Debugf("movieDB: CreatDouBanVideo 数据已添加. video: %#v", video)
 	return
 }
 
@@ -170,6 +169,7 @@ func (m *movieDB) RandomOneDouBanVideo() (video *types.DouBanVideo, err error) {
 	rand.Seed(time.Now().UnixNano())
 	index := rand.Intn(len(videos))
 	video = videos[index]
+	log.Debugf("movieDB: RandomOneDouBanVideo video: %#v", video)
 	return
 }
 
@@ -186,11 +186,11 @@ func (m *movieDB) FetchOneDouBanVideoByDouBanID(DouBanID string) (video *types.D
 		}
 		return nil, errors.WithMessagef(err, "DouBanID: %s", DouBanID)
 	}
-	log.Debugf("movieDB: FetchOneDouBanVideoByDouBanID %#v", video)
+	log.Debugf("movieDB: FetchOneDouBanVideoByDouBanID video: %#v", video)
 	return
 }
 
-func (m *movieDB) UpDateDouBanVideo(video *types.DouBanVideo) (err error) {
+func (m *movieDB) UpdateDouBanVideo(video *types.DouBanVideo) (err error) {
 	// 定义sql
 	if video.Names == "" {
 		return errors.New("空数据")
@@ -204,22 +204,21 @@ func (m *movieDB) UpDateDouBanVideo(video *types.DouBanVideo) (err error) {
 }
 
 // FetchDouBanVideoByType 获取 所有的 电影名
-func (m *movieDB) FetchDouBanVideoByType(typ types.Resource) (names []string, err error) {
+func (m *movieDB) FetchDouBanVideoByType(typ types.Resource) (nameList []string, err error) {
 	log.Infof("movieDB: FetchDouBanVideoByType 搜索 %s 类型豆瓣资源.", typ.Typ())
-	sql := `select names from douban_video where type=?`
+	sql := `select names from douban_video where type=?;`
 	rows, err := m.db.Query(sql, typ.Typ())
 	if err != nil {
 		return
 	}
 	defer rows.Close()
-
 	var namesA []string
 	for rows.Next() {
-		var name string
-		if err = rows.Scan(&name); err != nil {
+		var names string
+		if err = rows.Scan(&names); err != nil {
 			continue
 		}
-		namesA = append(namesA, name)
+		namesA = append(namesA, names)
 	}
 
 	for _, v := range namesA {
@@ -229,7 +228,7 @@ func (m *movieDB) FetchDouBanVideoByType(typ types.Resource) (names []string, er
 			continue
 		}
 		for _, n := range names1 {
-			names = append(names, n)
+			nameList = append(nameList, n)
 		}
 
 	}
@@ -307,11 +306,7 @@ func (m *movieDB) FetchTVMagnetByName(names []string) (videos []*types.FeedVideo
 	for _, n := range names {
 		sql := `select id,magnet,name,torrent_name from feed_video where name like ? and magnet!="" and  type="tv" and download=0;`
 		var likeName string
-		if strings.Contains(n, ".") {
-			likeName = fmt.Sprintf("%%.%s.%%", n)
-		} else {
-			likeName = fmt.Sprintf("%%%s%%", n)
-		}
+		likeName = fmt.Sprintf("%%%s%%", n)
 		// 定义sql
 		rows, err := m.db.Query(sql, likeName)
 		if err != nil {
@@ -364,6 +359,51 @@ func (m *movieDB) UpdateFeedVideoDownloadByID(id int32, isDownload int) (err err
 	// 定义sql
 	sql := `update feed_video set download=? where id=?;`
 	_, err = m.db.Exec(sql, isDownload, id)
+	if err != nil {
+		return err
+	}
+	return
+}
+
+func (m *movieDB) CountFeedVideo() (counts []*types.ReportCount, err error) {
+	sql := `select count(*)  as count ,web  from  feed_video group by web order by count;`
+	rows, err := m.db.Query(sql)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		c := new(types.ReportCount)
+		err = rows.Scan(&c.Count, &c.Web)
+		if err != nil {
+			return nil, err
+		}
+		counts = append(counts, c)
+	}
+	return
+}
+
+func (m *movieDB) FindLikeTVFromFeedVideo(name string) (videos []*types.FeedVideo, err error) {
+	sql := `select id,name from feed_video where name like ?`
+	rows, err := m.db.Query(sql, fmt.Sprintf("%%%s%%", name))
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		v := new(types.FeedVideo)
+		err = rows.Scan(&v.ID, &v.Name)
+		if err != nil {
+			return nil, err
+		}
+		videos = append(videos, v)
+	}
+	return
+}
+func (m *movieDB) UpdateFeedVideoNameByID(id int32, name string, resource types.Resource) (err error) {
+	// 定义sql
+	sql := `update feed_video set name=?,type=? where id=?;`
+	_, err = m.db.Exec(sql, name, resource.Typ(), id)
 	if err != nil {
 		return err
 	}
