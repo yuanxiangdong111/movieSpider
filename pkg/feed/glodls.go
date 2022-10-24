@@ -1,4 +1,4 @@
-package glodls
+package feed
 
 import (
 	"encoding/json"
@@ -21,7 +21,7 @@ import (
 	"sync"
 )
 
-const urlStr = "https://glodls.to/rss.php?cat=1,41"
+const urlGlodls = "https://glodls.to/rss.php?cat=1,41"
 
 type glodls struct {
 	url        string
@@ -29,13 +29,6 @@ type glodls struct {
 	web        string
 }
 
-func NewFeedGlodls(scheduling string) *glodls {
-	return &glodls{
-		urlStr,
-		scheduling,
-		"glodls",
-	}
-}
 func (g *glodls) Crawler() (videos []*types.FeedVideo, err error) {
 	fp := gofeed.NewParser()
 	fd, err := fp.ParseURL(g.url)
@@ -180,7 +173,7 @@ func (g *glodls) Run() {
 
 		for _, v := range videos {
 			go func(video *types.FeedVideo) {
-				err = model.MovieDB.CreatFeedVideo(video)
+				err = model.NewMovieDB().CreatFeedVideo(video)
 				if err != nil {
 					if errors.Is(err, model.ErrorDataExist) {
 						log.Warn(err)

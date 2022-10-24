@@ -1,4 +1,4 @@
-package tgx
+package feed
 
 import (
 	"movieSpider/pkg/config"
@@ -9,7 +9,7 @@ func Test_tgx_Run(t1 *testing.T) {
 	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 	t := tgx{
 		scheduling: "tt.fields.scheduling",
-		url:        urlStr,
+		url:        urlTgx,
 		web:        "tgx",
 	}
 	t.Run()

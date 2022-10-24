@@ -16,13 +16,14 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unicode/utf8"
 )
 
 var (
-	pageNum    *int
-	Resolution types.Resolution
-	TgBot      *TGBot
-	once       sync.Once
+	pageNum     *int
+	Resolution  types.Resolution
+	tgBotClient *tgBot
+	once        sync.Once
 )
 
 const (
@@ -34,13 +35,13 @@ const (
 	//StarListCMD     = "/star_list"
 )
 
-type TGBot struct {
+type tgBot struct {
 	botToken string
 	IDs      []int
 	bot      *tgbotapi.BotAPI
 }
 
-func NewTgBot(BotToken string, TgIDs []int) (TgBot *TGBot) {
+func NewTgBot(BotToken string, TgIDs []int) *tgBot {
 	once.Do(func() {
 		client := httpClient.NewHttpClient()
 		bot, err := tgbotapi.NewBotAPIWithClient(config.TG.BotToken, "https://api.telegram.org/bot%s/%s", client)
@@ -48,14 +49,14 @@ func NewTgBot(BotToken string, TgIDs []int) (TgBot *TGBot) {
 			log.Error(err)
 			os.Exit(-1)
 		}
-		TgBot = &TGBot{
+		tgBotClient = &tgBot{
 			BotToken, TgIDs, bot,
 		}
 	})
-	return TgBot
+	return tgBotClient
 }
 
-func (t *TGBot) StartBot() {
+func (t *tgBot) StartBot() {
 
 	// 发送通知
 	go func() {
@@ -101,7 +102,9 @@ func (t *TGBot) StartBot() {
 				if !ok {
 					continue
 				}
-				if aria2.Aria2 == nil {
+				aria2Server, err := aria2.NewAria2(config.Downloader.Aria2Label)
+				if err != nil {
+					log.Error(err)
 					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "aria2下载器服务异常")
 					msg.ReplyToMessageID = update.Message.MessageID
 					if _, err := t.bot.Send(msg); err != nil {
@@ -109,10 +112,16 @@ func (t *TGBot) StartBot() {
 					}
 					continue
 				}
-				files := aria2.Aria2.CompletedFiles()
+
+				files := aria2Server.CompletedFiles()
 				var bs string
 				for _, file := range files {
-					bs += fmt.Sprintf("%-40s | %s\n", file.FileName[0:40], file.Completed)
+					if utf8.RuneCountInString(file.FileName) > 40 {
+						nameRune := []rune(file.FileName)
+						bs += fmt.Sprintf("%-40s | %s\n", string(nameRune[0:40]), file.Completed)
+					} else {
+						bs += fmt.Sprintf("%-40s | %s\n", file.FileName, file.Completed)
+					}
 				}
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, bs)
 				msg.ReplyToMessageID = update.Message.MessageID
@@ -126,7 +135,7 @@ func (t *TGBot) StartBot() {
 					continue
 				}
 
-				count, err := model.MovieDB.CountFeedVideo()
+				count, err := model.NewMovieDB().CountFeedVideo()
 				if err != nil {
 					log.Error(err)
 					continue
@@ -262,7 +271,7 @@ func (t *TGBot) StartBot() {
 
 }
 
-func (t *TGBot) SendStrMsg(msg string) {
+func (t *tgBot) SendStrMsg(msg string) {
 	for _, id := range t.IDs {
 		tgMsg := tgbotapi.NewMessage(int64(id), msg)
 		if _, err := t.bot.Send(tgMsg); err != nil {
@@ -271,7 +280,7 @@ func (t *TGBot) SendStrMsg(msg string) {
 	}
 }
 
-//func (t *TGBot) StarCallbackQuery(update tgbotapi.Update) error {
+//func (t *tgBot) StarCallbackQuery(update tgbotapi.Update) error {
 //	pg, err := strconv.Atoi(update.CallbackQuery.Data)
 //	if err != nil {
 //		return err
@@ -296,7 +305,7 @@ func (t *TGBot) SendStrMsg(msg string) {
 //	return nil
 //}
 
-//func (t *TGBot) MovesCallbackQuery(update tgbotapi.Update) error {
+//func (t *tgBot) MovesCallbackQuery(update tgbotapi.Update) error {
 //	pg, err := strconv.Atoi(update.CallbackQuery.Data)
 //	if err != nil {
 //		return err
@@ -391,7 +400,7 @@ func inArray(val int, array []int) (ok bool, i int) {
 	return
 }
 
-func (t *TGBot) checkUser(ChatID int64, update tgbotapi.Update) bool {
+func (t *tgBot) checkUser(ChatID int64, update tgbotapi.Update) bool {
 	ok, _ := inArray(int(ChatID), config.TG.TgIDs)
 	if !ok {
 		msg := tgbotapi.NewMessage(ChatID, "您没有权限")
@@ -405,7 +414,7 @@ func (t *TGBot) checkUser(ChatID int64, update tgbotapi.Update) bool {
 	return ok
 }
 
-func (t *TGBot) checkPars(pars string, ChatID int64, update tgbotapi.Update, cmd string) ([]string, bool) {
+func (t *tgBot) checkPars(pars string, ChatID int64, update tgbotapi.Update, cmd string) ([]string, bool) {
 	log.Infof("Msg: %s", update.Message.Text)
 	cmdAndargs := removeSpaceItem(strings.Split(pars, " "))
 	switch cmd {

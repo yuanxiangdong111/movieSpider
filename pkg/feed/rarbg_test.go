@@ -1,4 +1,4 @@
-package rarbg
+package feed
 
 import (
 	"movieSpider/pkg/config"

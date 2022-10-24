@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"movieSpider/pkg/aria2"
+	"movieSpider/pkg/config"
 	"movieSpider/pkg/log"
 	"movieSpider/pkg/model"
 	"os"
@@ -27,7 +28,7 @@ func (r *report) Run() {
 	c.AddFunc(r.scheduling, func() {
 
 		// 资源统计
-		count, err := model.MovieDB.CountFeedVideo()
+		count, err := model.NewMovieDB().CountFeedVideo()
 		if err != nil {
 			log.Error("Report: err", err)
 		}
@@ -40,16 +41,18 @@ func (r *report) Run() {
 		log.Infof("Report: feed_video 数据统计: Total: %d  %s", Total, s)
 
 		// 下载情况统计
-		if aria2.Aria2 != nil {
-			files := aria2.Aria2.CompletedFiles()
-
-			var s string
-			for _, file := range files {
-				s += fmt.Sprintf("\nGID:%s, 大小:%s, 已完成:%s, 文件名:%s", file.GID, file.Size, file.Completed, file.FileName)
-				// todo 下载完后的向TG通知
-			}
-			log.Infof("Report: 下载统计: %s", s)
+		aria2Client, err := aria2.NewAria2(config.Downloader.Aria2Label)
+		if err != nil {
+			log.Error("Report: err", err)
+			return
 		}
+		files := aria2Client.CompletedFiles()
+		var msg string
+		for _, file := range files {
+			s += fmt.Sprintf("\nGID:%s, 大小:%s, 已完成:%s, 文件名:%s", file.GID, file.Size, file.Completed, file.FileName)
+			// todo 下载完后的向TG通知
+		}
+		log.Infof("Report: 下载统计: %s", msg)
 
 	})
 	c.Start()

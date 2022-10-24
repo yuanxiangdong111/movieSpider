@@ -7,8 +7,7 @@ import (
 	"movieSpider/pkg/aria2"
 	"movieSpider/pkg/bus"
 	"movieSpider/pkg/config"
-	"movieSpider/pkg/feed/bt4g"
-	"movieSpider/pkg/feed/knaben"
+	"movieSpider/pkg/feed"
 	"movieSpider/pkg/log"
 	"movieSpider/pkg/model"
 	"movieSpider/pkg/types"
@@ -38,13 +37,13 @@ func (d *Download) downloadTask() {
 
 func (d *Download) downloadTvTask() (err error) {
 	log.Info("Downloader tv working...")
-	tvs, err := model.MovieDB.FetchDouBanVideoByType(types.ResourceTV)
+	tvs, err := model.NewMovieDB().FetchDouBanVideoByType(types.ResourceTV)
 	if err != nil {
 		return err
 	}
 
 	// 获取 磁力连接
-	tvVides, err := model.MovieDB.FetchTVMagnetByName(tvs)
+	tvVides, err := model.NewMovieDB().FetchTVMagnetByName(tvs)
 	if err != nil {
 		return err
 	}
@@ -59,7 +58,7 @@ func (d *Download) downloadTvTask() (err error) {
 		return err
 	}
 	for _, v := range is3 {
-		err = model.MovieDB.UpdateFeedVideoDownloadByID(v.ID, 3)
+		err = model.NewMovieDB().UpdateFeedVideoDownloadByID(v.ID, 3)
 		if len(tvVides) == 0 {
 			continue
 		}
@@ -71,13 +70,13 @@ func (d *Download) downloadTvTask() (err error) {
 func (d *Download) downloadMovieTask() error {
 	// 获取 豆瓣 数据
 	log.Info("Downloader movie working...")
-	names, err := model.MovieDB.FetchDouBanVideoByType(types.ResourceMovie)
+	names, err := model.NewMovieDB().FetchDouBanVideoByType(types.ResourceMovie)
 	if err != nil {
 		return err
 	}
 
 	// 获取 磁力连接
-	MovieVides, err := model.MovieDB.FetchMovieMagnetByName(names)
+	MovieVides, err := model.NewMovieDB().FetchMovieMagnetByName(names)
 	if err != nil {
 		return err
 	}
@@ -87,7 +86,7 @@ func (d *Download) downloadMovieTask() error {
 		return err
 	}
 	for _, v := range MovieVides {
-		err = model.MovieDB.UpdateFeedVideoDownloadByID(v.ID, 3)
+		err = model.NewMovieDB().UpdateFeedVideoDownloadByID(v.ID, 3)
 		if err != nil {
 			return err
 		}
@@ -107,7 +106,7 @@ func (d *Download) aria2Download(vides []*types.FeedVideo) (err error) {
 		if err != nil {
 			return err
 		}
-		err = model.MovieDB.UpdateFeedVideoDownloadByID(v.ID, 1)
+		err = model.NewMovieDB().UpdateFeedVideoDownloadByID(v.ID, 1)
 		if err != nil {
 			return err
 		}
@@ -141,19 +140,19 @@ func (d *Download) Run() {
 
 func (d *Download) DownloadByName(name, Resolution string) (msg string) {
 	// 从 knaben 搜索
-	feedKnaben := knaben.NewFeedKnaben(name, d.ResolutionStr2Int(Resolution))
+	feedKnaben := feed.NewFeedKnaben(name, d.ResolutionStr2Int(Resolution))
 	_, err := feedKnaben.Crawler()
 	if err != nil {
 		log.Error(err)
 	}
 	// 从 Bt4g 搜索
-	feedBt4g := bt4g.NewFeedBt4g(name, d.ResolutionStr2Int(Resolution))
+	feedBt4g := feed.NewFeedBt4g(name, d.ResolutionStr2Int(Resolution))
 	_, err = feedBt4g.Crawler()
 	if err != nil {
 		log.Error(err)
 	}
 	// 获取 磁力连接
-	vides, err := model.MovieDB.FetchMovieMagnetByName([]string{name})
+	vides, err := model.NewMovieDB().FetchMovieMagnetByName([]string{name})
 	if err != nil {
 		log.Error(err)
 	}
@@ -173,7 +172,7 @@ func (d *Download) DownloadByName(name, Resolution string) (msg string) {
 			log.Error(err)
 			return
 		}
-		err = model.MovieDB.UpdateFeedVideoDownloadByID(v.ID, 1)
+		err = model.NewMovieDB().UpdateFeedVideoDownloadByID(v.ID, 1)
 		if err != nil {
 			log.Error(err)
 		}

@@ -94,7 +94,7 @@ var configCmd = &cobra.Command{
 		case true:
 			config.InitConfig(configFile)
 			model.NewMovieDB()
-			err := model.MovieDB.InitDBTable()
+			err := model.NewMovieDB().InitDBTable()
 			if err != nil {
 				log.Error(err)
 				return

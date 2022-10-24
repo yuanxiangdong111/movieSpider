@@ -1,4 +1,4 @@
-package btbt
+package feed
 
 import (
 	"github.com/PuerkitoBio/goquery"
@@ -16,19 +16,11 @@ import (
 	"sync"
 )
 
-const urlStr = "https://www.btbtt12.com/forum-index-fid-951.htm"
+const urlBtbt = "https://www.btbtt12.com/forum-index-fid-951.htm"
 
 type btbt struct {
 	url        string
 	scheduling string
-}
-
-func NewFeedBTBT(scheduling string) *btbt {
-
-	return &btbt{
-		urlStr,
-		scheduling,
-	}
 }
 
 func (b *btbt) Crawler() (Videos []*types.FeedVideo, err error) {
@@ -97,7 +89,7 @@ func (b *btbt) Crawler() (Videos []*types.FeedVideo, err error) {
 			wg.Done()
 			continue
 		}
-		v.TorrentName = v.TorrentUrl
+		v.TorrentName = v.Name
 		v.RowData = downloadUrl
 		Videos2 = append(Videos2, v)
 		wg.Done()
@@ -143,7 +135,7 @@ func (b *btbt) Run() {
 
 		for _, v := range videos {
 			go func(video *types.FeedVideo) {
-				err = model.MovieDB.CreatFeedVideo(video)
+				err = model.NewMovieDB().CreatFeedVideo(video)
 				if err != nil {
 					if errors.Is(err, model.ErrorDataExist) {
 						log.Warn(err)

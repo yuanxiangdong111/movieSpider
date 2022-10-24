@@ -1,4 +1,4 @@
-package bt4g
+package feed
 
 import (
 	"fmt"

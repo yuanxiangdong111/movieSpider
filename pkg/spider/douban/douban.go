@@ -99,7 +99,7 @@ func (d *douBan) Crawler() {
 			Playable = strings.ReplaceAll(Playable, "[", "")
 			Playable = strings.ReplaceAll(Playable, "]", "")
 			doubanVideo.Playable = Playable
-			err = model.MovieDB.CreatDouBanVideo(doubanVideo)
+			err = model.NewMovieDB().CreatDouBanVideo(doubanVideo)
 			if err != nil {
 				log.Error(err)
 				return

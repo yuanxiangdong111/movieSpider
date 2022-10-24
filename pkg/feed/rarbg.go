@@ -1,4 +1,4 @@
-package rarbg
+package feed
 
 import (
 	"encoding/json"
@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	urlMovie = "http://rarbg.to/rssdd.php?categories=14;15;16;17;21;22;42;44;45;46;47;48"
-	urlTV    = "http://rarbg.to/rssdd.php?categories=18;19;41"
+	urlRarbgMovie = "http://rarbg.to/rssdd.php?categories=14;15;16;17;21;22;42;44;45;46;47;48"
+	urlRarbgTV    = "http://rarbg.to/rssdd.php?categories=18;19;41"
 )
 
 type rarbg struct {
@@ -32,27 +32,6 @@ type rarbg struct {
 	httpClient *http.Client
 }
 
-func NewFeedRarbg(scheduling string, resourceType types.Resource) *rarbg {
-
-	if resourceType == types.ResourceMovie {
-		return &rarbg{
-			resourceType,
-			urlMovie,
-			"rarbg",
-			scheduling,
-			&http.Client{},
-		}
-	} else {
-		return &rarbg{
-			resourceType,
-			urlTV,
-			"rarbg",
-			scheduling,
-			&http.Client{},
-		}
-	}
-
-}
 func (r *rarbg) Crawler() (Videos []*types.FeedVideo, err error) {
 	fp := gofeed.NewParser()
 	fp.Client = r.httpClient
@@ -340,7 +319,7 @@ func (r *rarbg) save2DB(videos []*types.FeedVideo) {
 	}
 	for _, v := range videos {
 		go func(video *types.FeedVideo) {
-			err := model.MovieDB.CreatFeedVideo(video)
+			err := model.NewMovieDB().CreatFeedVideo(video)
 			if err != nil {
 				if errors.Is(err, model.ErrorDataExist) {
 					log.Warn(err)

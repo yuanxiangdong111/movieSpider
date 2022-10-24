@@ -1,4 +1,4 @@
-package knaben
+package feed
 
 import (
 	"encoding/json"

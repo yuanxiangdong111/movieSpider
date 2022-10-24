@@ -1,4 +1,4 @@
-package bt4g
+package feed
 
 import (
 	"encoding/json"
@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	urlStr = "https://bt4g.org"
+	urlBt4g = "https://bt4g.org"
 )
 
 type bt4g struct {
@@ -26,7 +26,7 @@ type bt4g struct {
 }
 
 func NewFeedBt4g(name string, resolution types.Resolution) *bt4g {
-	parse, err := url.Parse(urlStr)
+	parse, err := url.Parse(urlBt4g)
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
@@ -77,7 +77,7 @@ func (b *bt4g) Crawler() (videos []*types.FeedVideo, err error) {
 		wg.Add(1)
 		// 异步保存至 数据库
 		go func(video *types.FeedVideo) {
-			err := model.MovieDB.CreatFeedVideo(video)
+			err := model.NewMovieDB().CreatFeedVideo(video)
 			if err != nil {
 				if errors.Is(err, model.ErrorDataExist) {
 					log.Warn(err)
@@ -102,4 +102,7 @@ func (b *bt4g) Crawler() (videos []*types.FeedVideo, err error) {
 		return resolutionVideos, nil
 	}
 	return
+}
+func (b *bt4g) Run() {
+
 }

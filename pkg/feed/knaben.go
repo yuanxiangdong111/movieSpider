@@ -1,4 +1,4 @@
-package knaben
+package feed
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ import (
 	"sync"
 )
 
-const urlStr = "https://rss.knaben.eu"
+const urlKnaben = "https://rss.knaben.eu"
 
 type knaben struct {
 	url        string
@@ -24,7 +24,7 @@ type knaben struct {
 }
 
 func NewFeedKnaben(name string, resolution types.Resolution) *knaben {
-	parse, err := url.Parse(urlStr)
+	parse, err := url.Parse(urlKnaben)
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
@@ -89,7 +89,7 @@ func (k *knaben) Crawler() (videos []*types.FeedVideo, err error) {
 		wg.Add(1)
 		// 异步保存至 数据库
 		go func(video *types.FeedVideo) {
-			err := model.MovieDB.CreatFeedVideo(video)
+			err := model.NewMovieDB().CreatFeedVideo(video)
 			if err != nil {
 				if errors.Is(err, model.ErrorDataExist) {
 					log.Warn(err)
@@ -126,4 +126,8 @@ func (k *knaben) parseMagnet(str string) string {
 	}
 
 	return ""
+}
+
+func (k *knaben) Run() {
+
 }

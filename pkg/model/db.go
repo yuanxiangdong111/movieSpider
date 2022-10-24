@@ -21,13 +21,13 @@ type movieDB struct {
 }
 
 var (
-	once    sync.Once
-	MovieDB = new(movieDB)
+	once          sync.Once
+	movieDatabase = new(movieDB)
 
 	ErrorDataExist = errors.New("数据已存在")
 )
 
-func NewMovieDB() {
+func NewMovieDB() *movieDB {
 	once.Do(func() {
 
 		var dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", config.MySQL.User, config.MySQL.Password, config.MySQL.Host, config.MySQL.Port, config.MySQL.Database) // 连接数据库
@@ -54,16 +54,17 @@ func NewMovieDB() {
 				if err != nil {
 					log.Error(err)
 				}
-				MovieDB.db = mdb
-				MovieDB.InitDBTable()
+				movieDatabase.db = mdb
+				movieDatabase.InitDBTable()
 				return
 			}
 			log.Error(err)
 			os.Exit(1)
 
 		}
-		MovieDB.db = mdb
+		movieDatabase.db = mdb
 	})
+	return movieDatabase
 }
 
 func (m *movieDB) InitDBTable() (err error) {
@@ -83,6 +84,9 @@ func (m *movieDB) InitDBTable() (err error) {
 //查询单条结果
 
 func (m *movieDB) CreatFeedVideo(video *types.FeedVideo) (err error) {
+	if video.Magnet == "" {
+		return errors.New(fmt.Sprintf("movieDB: CreatFeedVideo Magnet is nill : %#v", video))
+	}
 	sql := `insert into feed_video(torrent_name,torrent_url,magnet,year,name,type,row_data,web,download,timestamp) value (?,?,?,?,?,?,?,?,?,?);`
 	_, err = m.db.Exec(sql,
 		video.TorrentName,
@@ -239,16 +243,12 @@ func (m *movieDB) FetchDouBanVideoByType(typ types.Resource) (nameList []string,
 func (m *movieDB) FetchMovieMagnetByName(names []string) (videos []*types.FeedVideo, err error) {
 
 	var videos1 []*types.FeedVideo
-	log.Warn("movieDB: FetchMovieMagnetByName 开始第一次查找Movie数据.")
+	log.Info("movieDB: FetchMovieMagnetByName 开始第一次查找Movie数据.")
 	log.Debugf("movieDB: FetchMovieMagnetByName 开始第一次查找Movie数据: %s.", names)
 	for _, n := range names {
 		sql := `select id,magnet,name,torrent_name from feed_video where name like ? and magnet!="" and  type="movie" and download=0 ;`
 		var likeName string
-		if strings.Contains(n, ".") {
-			likeName = fmt.Sprintf("%%.%s.%%", n)
-		} else {
-			likeName = fmt.Sprintf("%%%s%%", n)
-		}
+		likeName = fmt.Sprintf("%s%%", n)
 		// 定义sql
 		rows, err := m.db.Query(sql, likeName)
 		if err != nil {
@@ -269,7 +269,7 @@ func (m *movieDB) FetchMovieMagnetByName(names []string) (videos []*types.FeedVi
 		return videos1, nil
 	}
 
-	log.Warn("movieDB: FetchMovieMagnetByName 开始第二次查找数据.")
+	log.Info("movieDB: FetchMovieMagnetByName 开始第二次查找数据.")
 	for _, n := range names {
 		// 查找 没有下载过 && 类型不等于TV的数据
 		sql := `select id,magnet,name,torrent_name from feed_video where name like ? and magnet!="" and download=0 and type!="tv";`
@@ -306,7 +306,7 @@ func (m *movieDB) FetchTVMagnetByName(names []string) (videos []*types.FeedVideo
 	for _, n := range names {
 		sql := `select id,magnet,name,torrent_name from feed_video where name like ? and magnet!="" and  type="tv" and download=0;`
 		var likeName string
-		likeName = fmt.Sprintf("%%%s%%", n)
+		likeName = fmt.Sprintf("%s%%", n)
 		// 定义sql
 		rows, err := m.db.Query(sql, likeName)
 		if err != nil {

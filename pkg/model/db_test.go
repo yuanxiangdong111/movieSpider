@@ -15,8 +15,8 @@ func Test_movieDB_FetchMagnetByName(t *testing.T) {
 	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 	NewMovieDB()
 
-	var names = []string{"Andor"}
-	videos, err := MovieDB.FetchMovieMagnetByName(names)
+	var names = []string{"Black.Adam"}
+	videos, err := movieDatabase.FetchMovieMagnetByName(names)
 	if err != nil {
 		t.Error(err)
 	}
@@ -27,10 +27,34 @@ func Test_movieDB_FetchMagnetByName(t *testing.T) {
 }
 
 func Test_movieDB_UpdateFeedVideoDownloadByID(t *testing.T) {
-	//config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
-	//NewMovieDB()
+	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
+	sql := "select  id,name,torrent_name  from feed_video where web=? and torrent_name like ?"
+	query, err := NewMovieDB().db.Query(sql, "btbt", fmt.Sprintf("https%%"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	for query.Next() {
+		var v types.FeedVideo
+
+		err := query.Scan(&v.ID, &v.Name, &v.TorrentName)
+		if err != nil {
+			t.Error(err)
+		}
+		_, err = NewMovieDB().db.Exec("update feed_video set torrent_name=? where id=?", v.Name, v.ID)
+		if err != nil {
+			if strings.Contains(err.Error(), "Duplicate entry") {
+				_, err := NewMovieDB().db.Exec("delete  from  feed_video  where id=?", v.ID)
+				if err != nil {
+					t.Error(err)
+				}
+			}
+			t.Error(err)
+		}
+		fmt.Println(v)
+	}
 	//
-	//err := MovieDB.UpdateFeedVideoDownloadByID(55)
+	//err := movieDatabase.UpdateFeedVideoDownloadByID(55)
 	//if err != nil {
 	//	t.Error(err)
 	//}
@@ -45,7 +69,7 @@ func Test_movieDB_UpdateFeedVideoDownloadByID(t *testing.T) {
 func Test_movieDB_RandomOneDouBanVideo(t *testing.T) {
 	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 	NewMovieDB()
-	MovieDB.RandomOneDouBanVideo()
+	movieDatabase.RandomOneDouBanVideo()
 }
 
 func Test_movieDB_FetchTVMagnetByName(t *testing.T) {
@@ -53,14 +77,20 @@ func Test_movieDB_FetchTVMagnetByName(t *testing.T) {
 	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 	NewMovieDB()
 
-	var names = []string{"Andor"}
-	videos, err := MovieDB.FetchTVMagnetByName(names)
+	var names = []string{"Black.Adam"}
+	videos, err := movieDatabase.FetchTVMagnetByName(names)
 	if err != nil {
 		t.Error(err)
 	}
 	is1, is3 := sotByResolution(videos)
-	fmt.Println(is1)
-	fmt.Println(is3)
+	for _, video := range is1 {
+		fmt.Println(video)
+	}
+	fmt.Println("-----------------")
+	for _, video := range is3 {
+		fmt.Println(video)
+
+	}
 
 }
 func sotByResolution(videos []*types.FeedVideo) (downloadIs1 []*types.FeedVideo, downloadIs3 []*types.FeedVideo) {
@@ -100,7 +130,7 @@ func Test_movieDB_FetchDouBanVideoByType(t *testing.T) {
 	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 	NewMovieDB()
 
-	Videos, err := MovieDB.FetchDouBanVideoByType(types.ResourceTV)
+	Videos, err := movieDatabase.FetchDouBanVideoByType(types.ResourceTV)
 	if err != nil {
 		t.Error(err)
 	}
@@ -114,7 +144,7 @@ func Test_movieDB_FetchDouBanVideoByType(t *testing.T) {
 func Test_movieDB_CountFeedVideo(t *testing.T) {
 	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 	NewMovieDB()
-	count, err := MovieDB.CountFeedVideo()
+	count, err := movieDatabase.CountFeedVideo()
 	if err != nil {
 		t.Error(err)
 	}
@@ -133,7 +163,7 @@ func Test_movieDB_CountFeedVideo(t *testing.T) {
 func Test_movieDB_FindLikeTVFromFeedVideo(t *testing.T) {
 	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 	NewMovieDB()
-	videos, err := MovieDB.FindLikeTVFromFeedVideo("S19")
+	videos, err := movieDatabase.FindLikeTVFromFeedVideo("S19")
 	if err != nil {
 		t.Error(err)
 	}
@@ -142,7 +172,7 @@ func Test_movieDB_FindLikeTVFromFeedVideo(t *testing.T) {
 
 		matchArr := compileRegex.FindStringSubmatch(video.Name)
 		if len(matchArr) > 0 {
-			err := MovieDB.UpdateFeedVideoNameByID(video.ID, matchArr[1], types.ResourceTV)
+			err := movieDatabase.UpdateFeedVideoNameByID(video.ID, matchArr[1], types.ResourceTV)
 			if err != nil {
 				t.Error(err)
 			}

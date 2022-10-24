@@ -1,4 +1,4 @@
-package glodls
+package feed
 
 import (
 	"encoding/json"

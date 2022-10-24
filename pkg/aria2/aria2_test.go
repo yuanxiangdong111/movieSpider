@@ -86,7 +86,7 @@ func Test_aria2_DownloadList(t *testing.T) {
 }
 
 func Test_aria2_CompletedFiles(t *testing.T) {
-	config.InitConfig("/home/ycd/Data/Daddylab/source_code/src/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
+	config.InitConfig("/home/ycd/Data/Daddylab/source_code/go-source/tools-cmd/movieSpider/bin/movieSpider/config.yaml")
 
 	newAria2, err := NewAria2(config.Downloader.Aria2Label)
 	if err != nil {

@@ -2,7 +2,6 @@ package aria2
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/zyxar/argo/rpc"
 	"movieSpider/pkg/config"
@@ -11,10 +10,12 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var (
-	Aria2 *aria2
+	aria2Client *aria2
+	once        sync.Once
 )
 
 type aria2 struct {
@@ -22,18 +23,19 @@ type aria2 struct {
 }
 
 func NewAria2(label string) (*aria2, error) {
-	for _, v := range config.Aria2cList {
-		if v.Label == label {
-			client, err := rpc.New(context.TODO(), v.Url, v.Token, 0, nil)
-			if err != nil {
-				return nil, err
+	once.Do(func() {
+		for _, v := range config.Aria2cList {
+			if v.Label == label {
+				client, err := rpc.New(context.TODO(), v.Url, v.Token, 0, nil)
+				if err != nil {
+					log.Error(err)
+				}
+				log.Debug(config.Aria2cList)
+				aria2Client = &aria2{client}
 			}
-			log.Debug(config.Aria2cList)
-			Aria2 = &aria2{client}
-			return Aria2, nil
 		}
-	}
-	return nil, errors.New("aria2 is nil")
+	})
+	return aria2Client, nil
 }
 
 func (a *aria2) DownloadByUrl(url string) (gid string, err error) {

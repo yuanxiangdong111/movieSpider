@@ -1,4 +1,4 @@
-package tgx
+package feed
 
 import (
 	"encoding/json"
@@ -18,20 +18,12 @@ import (
 	"sync"
 )
 
-const urlStr = "https://tgx.rs/rss"
+const urlTgx = "https://tgx.rs/rss"
 
 type tgx struct {
 	scheduling string
 	url        string
 	web        string
-}
-
-func NewTGx(scheduling string) *tgx {
-	return &tgx{
-		scheduling: scheduling,
-		url:        urlStr,
-		web:        "tgx",
-	}
 }
 
 func (t *tgx) Crawler() (videos []*types.FeedVideo, err error) {
@@ -154,7 +146,7 @@ func (t *tgx) Run() {
 
 		for _, v := range videos {
 			go func(video *types.FeedVideo) {
-				err = model.MovieDB.CreatFeedVideo(video)
+				err = model.NewMovieDB().CreatFeedVideo(video)
 				if err != nil {
 					if errors.Is(err, model.ErrorDataExist) {
 						log.Warn(err)

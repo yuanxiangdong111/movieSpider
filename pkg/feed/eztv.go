@@ -1,4 +1,4 @@
-package eztv
+package feed
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-const urlStr = "https://eztv.re/ezrss.xml"
+const urlEztv = "https://eztv.re/ezrss.xml"
 
 type eztv struct {
 	scheduling string
@@ -22,13 +22,6 @@ type eztv struct {
 	web        string
 }
 
-func NewFeedEztv(scheduling string) *eztv {
-	return &eztv{
-		scheduling,
-		urlStr,
-		"eztv",
-	}
-}
 func (f *eztv) Crawler() (videos []*types.FeedVideo, err error) {
 	fp := gofeed.NewParser()
 	fd, err := fp.ParseURL(f.url)
@@ -100,7 +93,7 @@ func (f *eztv) Run() {
 		}
 		for _, v := range videos {
 			go func(video *types.FeedVideo) {
-				err = model.MovieDB.CreatFeedVideo(video)
+				err = model.NewMovieDB().CreatFeedVideo(video)
 				if err != nil {
 					if errors.Is(err, model.ErrorDataExist) {
 						log.Warn(err)

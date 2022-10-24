@@ -6,18 +6,6 @@ import (
 	"os"
 )
 
-type Level int8
-
-const (
-	DebugLevel Level = iota - 1
-	InfoLevel
-	WarnLevel
-	ErrorLevel
-	DPanicLevel
-	PanicLevel
-	FatalLevel
-)
-
 var (
 	logTmFmt    = "2006-01-02 15:04:05"
 	logger      *zap.SugaredLogger
